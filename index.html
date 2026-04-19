@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>MSA Market Share Extractor v5</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#22272e;
+  --bdr:#30363d;--bdr2:#484f58;
+  --txt:#e6edf3;--txt2:#8b949e;--txt3:#6e7681;
+  --acc:#388bfd;--acc2:#1f6feb;--adm:#0d2149;
+  --grn:#3fb950;--gdm:#122d1a;--gdm2:rgba(63,185,80,.12);
+  --amb:#d29922;--adm2:#2d2007;
+  --red:#f85149;--rdm:#2d1414;
+  --tel:#39d3f0;--tdm:#0a2630;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',monospace;background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px}
+.app{max-width:1280px;margin:0 auto;padding:20px}
+.hdr{border-bottom:1px solid var(--bdr);padding-bottom:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hdr h1{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.ver{color:var(--txt3);font-size:10px;border:1px solid var(--bdr);border-radius:3px;padding:2px 7px}
+/* SECTIONS */
+.sec{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:16px 18px;margin-bottom:10px}
+.sec.opt{border-color:rgba(57,211,240,.2)}.sec.acc-b{border-color:rgba(56,139,253,.35)}.sec.warn-b{border-color:rgba(210,153,34,.4)}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+.sh.nb{margin-bottom:0}
+.sn{width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+.sn.done{background:var(--grn)}.sn.opt{background:var(--tel)}.sn.w{background:var(--amb)}
+.slbl{font-size:10px;letter-spacing:.14em;color:var(--txt2);text-transform:uppercase;font-weight:600}
+.ssub{font-size:10px;color:var(--txt3);letter-spacing:.04em}
+/* DROP ZONES */
+.dz{border:1px dashed var(--bdr2);border-radius:4px;padding:20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--txt3)}
+.dz:hover,.dz.drag{border-color:var(--acc);background:rgba(56,139,253,.06);color:var(--txt2)}
+.dz.tel:hover,.dz.tel.drag{border-color:var(--tel);background:rgba(57,211,240,.05)}
+.dz input{display:none}.dzi{font-size:18px;opacity:.5;margin-bottom:4px}.dzt{font-size:12px}.dzh{font-size:10px;color:var(--txt3);margin-top:3px}
+/* STATUS BARS */
+.sb{border-left:2px solid var(--grn);background:var(--bg3);border-radius:0 4px 4px 0;padding:6px 11px;font-size:11px;color:var(--grn);margin-top:8px;display:none;line-height:1.5}
+.sb.on{display:block}.sb.w{border-left-color:var(--amb);color:var(--amb)}.sb.e{border-left-color:var(--red);color:var(--red)}
+/* BUTTONS */
+.btn{border:none;border-radius:4px;padding:7px 13px;font-family:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;transition:all .1s;text-transform:uppercase}
+.btn.pri{background:var(--acc);color:#fff}.btn.pri:hover{background:var(--acc2)}.btn.pri:disabled{background:var(--bg3);color:var(--txt3);cursor:not-allowed}
+.btn.grn{background:var(--gdm);color:var(--grn);border:1px solid rgba(63,185,80,.4)}.btn.grn:hover{background:var(--grn);color:#fff}.btn.grn:disabled{opacity:.4;cursor:not-allowed}
+.btn.ghost{background:transparent;color:var(--txt2);border:1px solid var(--bdr)}.btn.ghost:hover{border-color:var(--bdr2);color:var(--txt)}
+.btn.sm{padding:4px 9px;font-size:10px}.btn.fw{width:100%;margin-top:8px}
+/* SEARCHABLE DROPDOWN */
+.drop-wrap{position:relative}
+.drop-inp{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:12px;padding:7px 10px;border-radius:4px;outline:none;width:100%}
+.drop-inp:focus{border-color:var(--acc)}
+.drop-list{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--bg2);border:1px solid var(--bdr2);border-radius:4px;max-height:260px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.di{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bdr);transition:background .08s}
+.di:last-child{border-bottom:none}
+.di:hover{background:var(--adm)}
+.di.sel{border-left:2px solid var(--grn);background:var(--gdm2)}
+.di-name{font-size:12px;font-weight:600;color:var(--txt)}
+.di-meta{font-size:10px;color:var(--txt3);margin-top:2px}
+.di-sug{display:inline-block;font-size:9px;background:var(--tdm);color:var(--tel);border-radius:2px;padding:1px 5px;margin-top:2px}
+.dg-lbl{padding:6px 12px 4px;font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;background:var(--bg3);border-bottom:1px solid var(--bdr);position:sticky;top:0}
+/* CHIPS */
+.chip{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:3px;font-size:11px;border:1px solid;line-height:1.3}
+.chip.grn{background:var(--gdm);color:var(--grn);border-color:rgba(63,185,80,.3)}
+.chip.tel{background:var(--tdm);color:var(--tel);border-color:rgba(57,211,240,.3)}
+.chip.blue{background:var(--adm);color:#79c0ff;border-color:rgba(56,139,253,.3)}
+.chip.msa{background:var(--gdm2);color:var(--grn);border-color:rgba(63,185,80,.4);font-weight:600}
+.chip.gray{background:var(--bg3);color:var(--txt2);border-color:var(--bdr)}
+.chip.dashed{border-style:dashed}
+.cx{cursor:pointer;opacity:.5;font-size:12px}.cx:hover{opacity:1;color:var(--red)}
+.cx-s{cursor:pointer;opacity:.6;font-size:11px;padding:0 1px;border-radius:2px}.cx-s:hover{opacity:1;background:var(--tdm);color:var(--tel)}
+/* LAYOUT */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.fl{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
+.div{height:1px;background:var(--bdr);margin:12px 0}
+.lbl{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:6px}
+.ib{background:var(--bg3);border-left:2px solid var(--acc);padding:6px 10px;border-radius:0 3px 3px 0;font-size:11px;color:var(--txt3);line-height:1.6;margin-bottom:8px}
+.ib.grn{border-left-color:var(--grn);color:var(--grn)}.ib.amb{border-left-color:var(--amb);color:var(--amb)}.ib.tel{border-left-color:var(--tel);color:var(--tel)}
+.inp{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;outline:none}
+.inp:focus{border-color:var(--acc)}.inp.fw{width:100%}
+.sel-el{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:11px;padding:5px 7px;border-radius:4px;outline:none;cursor:pointer}
+.sel-el:focus{border-color:var(--acc)}::placeholder{color:var(--txt3)}
+/* AMBIGUITY */
+.amb-card{background:var(--bg3);border:1px solid rgba(210,153,34,.35);border-radius:5px;padding:12px;margin-bottom:9px}
+.amb-hdr{font-size:11px;color:var(--amb);margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.amb-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ao{background:var(--bg4);border:1px solid var(--bdr);border-radius:4px;padding:7px 10px;cursor:pointer;transition:all .1s;max-width:260px}
+.ao:hover{border-color:var(--acc)}.ao.ch{border-color:var(--grn);background:var(--gdm2)}
+.ao-name{font-size:11px;font-weight:600;color:var(--txt)}.ao-grp{font-size:10px;color:var(--txt3);margin-top:2px}
+.ao-type{font-size:9px;background:var(--tdm);color:var(--tel);border-radius:2px;padding:1px 4px;margin-top:3px;display:inline-block}
+/* MARKET GRID */
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-top:10px}
+.mc{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;overflow:hidden}
+.mc.ref{border-color:rgba(57,211,240,.2)}.mc.unm{border-color:rgba(210,153,34,.35)}
+.mc-hdr{background:var(--bg4);padding:9px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:flex-start;gap:8px}
+.mc-name{font-size:12px;font-weight:600;color:var(--txt);flex:1}.mc-raw{font-size:10px;color:var(--txt3);margin-top:2px}
+.mc-body{padding:10px 12px}
+.yr-p{background:var(--bg2);border:1px solid var(--bdr);border-radius:4px;padding:8px 10px;margin-bottom:7px}
+.yr-p:last-child{margin-bottom:0}
+.yr-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.yr-lbl.y1{color:var(--acc)}.yr-lbl.y2{color:var(--grn)}
+.comp-chips{display:flex;flex-wrap:wrap;gap:4px;min-height:20px;margin-bottom:6px}
+.ar{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+/* OUTPUT */
+.out-blk{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;margin-bottom:12px;overflow:hidden}
+.out-hdr{background:var(--bg3);border-bottom:1px solid var(--bdr);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.odot{width:5px;height:5px;border-radius:50%;background:var(--acc);flex-shrink:0}
+table.ot{width:100%;border-collapse:collapse;font-size:12px}
+table.ot thead th{background:var(--bg3);color:var(--txt3);font-size:10px;letter-spacing:.09em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--bdr);font-weight:400;text-align:right}
+table.ot thead th.lft{text-align:left}
+table.ot thead th.yh{text-align:center;color:var(--acc);font-weight:600;font-size:11px}
+table.ot tbody tr{border-bottom:1px solid var(--bdr);transition:background .07s}
+table.ot tbody tr:last-child{border-bottom:none}
+table.ot tbody tr:hover{background:var(--bg3)}
+table.ot tr.mr{background:var(--adm)}
+table.ot tr.mr:hover{background:#162040}
+table.ot tr.or td{color:var(--txt3);font-style:italic}
+table.ot tr.sub-r td{color:var(--txt2);font-style:italic;font-size:11px}
+table.ot tr.sub-r td.lft{padding-left:22px;color:var(--txt3)}
+table.ot td{padding:7px 10px}
+table.ot td.lft{color:var(--txt2)}
+table.ot td.msac{color:var(--grn);font-weight:600}
+table.ot td.rt{text-align:right;font-variant-numeric:tabular-nums}
+table.ot td.sp{width:1px;background:var(--bdr);padding:0}
+.sh-h{color:var(--grn)}.sh-m{color:var(--amb)}.sh-l{color:var(--txt2)}
+.du{color:var(--grn);font-size:10px;margin-left:2px}.dd{color:var(--red);font-size:10px;margin-left:2px}
+.log-box{background:var(--bg);border:1px solid var(--bdr);border-radius:4px;padding:10px;font-size:10px;color:var(--txt3);line-height:1.9;max-height:180px;overflow-y:auto;margin-top:8px}
+.lt{font-size:10px;color:var(--txt3);cursor:pointer;letter-spacing:.06em;margin-top:6px;display:inline-block}.lt:hover{color:var(--acc)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="hdr"><h1>MSA Market Share Extractor</h1><span class="ver">v5</span><span style="color:var(--txt3);font-size:11px">// Nielson Data Tool</span></div>
+
+<!-- S1: Raw Data -->
+<div class="sec" id="s-raw">
+  <div class="sh"><span class="sn" id="sn-r">1</span><span class="slbl">Raw Nielson Data</span><span class="ssub">.xlsx · .xls · .csv</span></div>
+  <div class="dz" id="dz-r" onclick="fiR.click()"><input type="file" id="fiR" accept=".xlsx,.xls,.csv">
+    <div class="dzi">⬆</div><div class="dzt">Drop raw data file or click</div>
+    <div class="dzh">Year · Market Name · Retail Supplier · Group Name · # Stores · ACV</div>
+  </div>
+  <div class="sb" id="sb-r"></div>
+</div>
+
+<!-- REF: Optional -->
+<div class="sec opt" id="s-ref">
+  <div class="sh"><span class="sn opt">◆</span><span class="slbl">Prior MSA Reference</span><span class="ssub">Optional · Auto-imports markets, per-year comps, sub-banner breakdown rows</span></div>
+  <div class="dz tel" id="dz-ref" onclick="fiRef.click()"><input type="file" id="fiRef" accept=".xlsx,.xls,.csv">
+    <div class="dzi" style="color:var(--tel)">◆</div><div class="dzt">Drop prior MSA file or click</div>
+    <div class="dzh">Detects italic/small-font sub-banner rows · Groups similar ambiguous cases · Filters footnotes</div>
+  </div>
+  <div class="sb" id="sb-ref"></div>
+  <span class="lt hidden" id="log-tog" onclick="togLog()">▸ detection log</span>
+  <div class="log-box hidden" id="log-el"></div>
+</div>
+
+<!-- PRIMARY SELECT -->
+<div class="sec acc-b hidden" id="s-pri">
+  <div class="sh"><span class="sn" id="sn-p">2</span><span class="slbl">Select Primary / MSA Company</span></div>
+  <div id="pri-hint" class="ib tel hidden"></div>
+  <div class="g2">
+    <div>
+      <div class="lbl">Search &amp; Select</div>
+      <div class="drop-wrap">
+        <input class="drop-inp" id="pri-inp" placeholder="Type to search retailers &amp; sub-banners…" oninput="filterPri()" onfocus="openPriDrop()" autocomplete="off">
+        <div class="drop-list hidden" id="pri-drop"></div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl">Selected</div>
+      <div id="pri-confirm" class="ib amb">Not set — search &amp; click above</div>
+    </div>
+  </div>
+</div>
+
+<!-- PRIMARY SUB-BANNER CONFIG -->
+<div class="sec hidden" id="s-sub" style="border-color:rgba(57,211,240,.25)">
+  <div class="sh" style="margin-bottom:10px">
+    <span class="sn opt">⊞</span>
+    <span class="slbl">Primary Company Sub-banners</span>
+    <span class="ssub" id="sub-avail-ct"></span>
+    <div style="flex:1"></div>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;color:var(--txt2)">
+      <input type="checkbox" id="sub-toggle" onchange="togMsaSubs()">
+      Show sub-banner breakdown rows in output
+    </label>
+  </div>
+  <div class="hidden" id="sub-body">
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:10px">Select which sub-banners appear as indented rows under the primary company. Store counts shown per sub-banner. Does <strong>not</strong> affect All Other calculation.</div>
+    <div class="fl" id="sub-chips"></div>
+    <div style="margin-top:8px;display:flex;gap:6px">
+      <button class="btn ghost sm" onclick="selAllSubs()">Select All</button>
+      <button class="btn ghost sm" onclick="selNoneSubs()">Clear All</button>
+    </div>
+  </div>
+</div>
+
+<!-- AMBIGUITY RESOLUTION -->
+<div class="sec warn-b hidden" id="s-amb">
+  <div class="sh"><span class="sn w">!</span><span class="slbl">Resolve Ambiguous Matches</span><span class="ssub" id="amb-cnt"></span></div>
+  <div style="font-size:11px;color:var(--txt3);margin-bottom:10px">Similar names grouped — resolving once applies to all instances of that name.</div>
+  <div id="amb-cards"></div>
+  <button class="btn pri" style="margin-top:10px" onclick="applyAmb()">Apply &amp; Continue ↓</button>
+</div>
+
+<!-- MARKET EDITOR -->
+<div class="sec hidden" id="s-ed">
+  <div class="sh" style="margin-bottom:10px">
+    <span class="sn" id="sn-ed">3</span><span class="slbl">Markets &amp; Per-Year Comparisons</span>
+    <span class="ssub" id="mkt-ct"></span>
+    <button class="btn ghost sm" onclick="showAddMkt()">+ Market</button>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--txt3)">Year pair:</span>
+      <div class="fl" id="yr-tags"></div>
+    </div>
+    <input class="inp" id="mkt-f" placeholder="Filter markets…" style="width:150px" oninput="renderGrid()">
+  </div>
+
+  <!-- Add Market Panel -->
+  <div class="sec hidden" id="add-mkt-sec" style="border-color:var(--acc);padding:13px;margin-bottom:10px">
+    <div class="lbl" style="margin-bottom:8px">Add Market</div>
+    <div class="fl" style="margin-bottom:9px">
+      <select class="sel-el" id="add-mkt-sel" style="flex:1"></select>
+      <button class="btn pri sm" onclick="doAddMkt()">Add</button>
+      <button class="btn ghost sm" onclick="document.getElementById('add-mkt-sec').classList.add('hidden')">Cancel</button>
+    </div>
+    <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;color:var(--txt2)">
+      <input type="checkbox" id="copy-chk" onchange="togCopy()">
+      Copy comparisons from an existing market
+    </label>
+    <div class="hidden" id="copy-sec" style="margin-top:9px;background:var(--bg3);border:1px solid var(--bdr);border-radius:4px;padding:10px">
+      <div class="lbl" style="margin-bottom:7px">Copy from</div>
+      <div class="fl">
+        <select class="sel-el" id="copy-from-sel" style="flex:1"></select>
+        <label style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:4px"><input type="checkbox" id="cp-y1" checked> Yr1</label>
+        <label style="font-size:11px;color:var(--txt2);display:flex;align-items:center;gap:4px"><input type="checkbox" id="cp-y2" checked> Yr2</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="mkt-grid" id="mkt-grid"></div>
+</div>
+
+<!-- ACTIONS -->
+<div class="fl" style="margin-top:10px">
+  <button class="btn pri fw" id="run-btn" disabled onclick="genOutput()" style="flex:3">Generate MSA Output</button>
+  <button class="btn grn hidden fw" id="dl-btn" onclick="dlXLSX()" style="flex:1;white-space:nowrap">⬇ Download .xlsx</button>
+</div>
+<div id="output" style="margin-top:16px"></div>
+</div>
+
+<script>
+/* ═══════════════ STATE ═══════════════ */
+const G={
+  raw:[],mkts:[],sups:[],yrs:[],
+  rawGroups:{},  // retailer → Set<group>
+  allSubs:[],    // [{raw,group,label}] — all valid sub-banners
+  refLoaded:false, refHint:null,
+  selMSA:null,   // CompEntry
+  selYP:null,    // [yr1,yr2]
+  cfgs:{},       // key → {refName,rawMkt,matched,yr1comps,yr2comps}
+  pendAmb:[],    // [{normName,refName,instances,candidates}]
+  ambChoices:{}, // normName→CompEntry
+  log:[],
+  // primary sub-banner config
+  msaSubCfg:{show:false, selSubs:new Set()} // selSubs = Set<groupName>
+};
+let _cMap={},_cIdx=0;
+
+/* ═══════════════ COMP ENTRY ═══════════════ */
+const mkComp=(raw,group=null,showSubs=false)=>({raw,group:group||null,label:group?`${group} (${shortSup(raw)})`:shortSup(raw),showSubs:!!showSubs});
+const sameComp=(a,b)=>a.raw===b.raw&&a.group===b.group;
+const compKey=c=>`${c.raw}|||${c.group||''}`;
+const shortSup=s=>s.replace(/\s*\(.*?\)\s*/g,'').trim();
+const encV=c=>{const s=c.showSubs?'1':'0';return c.group?`G:${c.raw}:${c.group}:${s}`:`R:${c.raw}:${s}`;};
+const decV=v=>{if(!v)return null;const p=v.split(':');if(p[0]==='G')return mkComp(p[1],p[2],p[3]==='1');if(p[0]==='R')return mkComp(p[1],null,p[2]==='1');return null;};
+const hasGrps=c=>!c.group&&G.rawGroups[c.raw]&&[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g)).length>0;
+
+/* ═══════════════ EXCLUSIONS ═══════════════ */
+// Names that are never valid comparison companies
+const EXCL_NAMES=new Set(['independent','all other','all other retailers','total','n/a','na','unknown','other']);
+// Footer detection patterns
+const isFooterText=s=>{
+  if(!s||typeof s!=='string')return false;
+  const t=s.trim();
+  if(t.length>80)return true;
+  if(/^(source|copyright|for full|in [a-z]+\s+\d{4}|ml\s|ck\s|updated|\*|note:|http)/i.test(t))return true;
+  if(/[©\\]/.test(t)||/j:\\|c:\\/.test(t.toLowerCase()))return true;
+  return false;
+};
+const isValidComp=n=>{
+  if(!n||typeof n!=='string')return false;
+  const t=n.trim();
+  if(t.length>60||t.length<2)return false;
+  if(EXCL_NAMES.has(t.toLowerCase()))return false;
+  if(isFooterText(t))return false;
+  return true;
+};
+
+/* ═══════════════ FILE WIRING ═══════════════ */
+const wireDZ=(dz,fi,fn)=>{
+  dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag')};
+  dz.ondragleave=()=>dz.classList.remove('drag');
+  dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');fn(e.dataTransfer.files[0])};
+  fi.onchange=e=>fn(e.target.files[0]);
+};
+wireDZ(document.getElementById('dz-r'),fiR,handleRaw);
+wireDZ(document.getElementById('dz-ref'),fiRef,handleRef);
+const readBuf=(f,cb)=>{const r=new FileReader();r.onload=e=>cb(e.target.result,f.name);r.readAsArrayBuffer(f)};
+const readTxt=(f,cb)=>{const r=new FileReader();r.onload=e=>cb(e.target.result,f.name);r.readAsText(f)};
+
+/* ═══════════════ RAW DATA ═══════════════ */
+function handleRaw(f){
+  if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='csv')readTxt(f,(t,n)=>procRaw(XLSX.read(t,{type:'string'}),n));
+  else readBuf(f,(b,n)=>procRaw(XLSX.read(b,{type:'array'}),n));
+}
+function procRaw(wb,fname){
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const data=XLSX.utils.sheet_to_json(ws,{defval:''});
+  G.raw=data.map(r=>({
+    year:String(r['Year']||r['year']||'').trim(),
+    market:String(r['Market Name']||r['market']||'').trim(),
+    retailer:String(r['Retail Supplier']||r['retailer']||'').trim(),
+    group:String(r['Group Name']||r['group']||'').trim(),
+    stores:Number(r['# Stores']||r['stores']||0),
+    acv:Number(r['ACV']||r['acv']||0)
+  })).filter(r=>r.market&&r.retailer&&r.year);
+  G.mkts=[...new Set(G.raw.map(r=>r.market))].sort();
+  G.sups=[...new Set(G.raw.map(r=>r.retailer))].sort();
+  G.yrs=[...new Set(G.raw.map(r=>r.year))].sort();
+  G.rawGroups={};
+  G.raw.forEach(r=>{if(!G.rawGroups[r.retailer])G.rawGroups[r.retailer]=new Set();if(r.group)G.rawGroups[r.retailer].add(r.group);});
+  const seen=new Set();G.allSubs=[];
+  G.sups.forEach(sup=>[...(G.rawGroups[sup]||[])].forEach(grp=>{
+    if(!grp||grp.length<2||/no\s*group/i.test(grp))return;
+    const k=`${sup}|||${grp}`;if(seen.has(k))return;seen.add(k);
+    G.allSubs.push(mkComp(sup,grp));
+  }));
+  G.allSubs.sort((a,b)=>a.group.localeCompare(b.group));
+  const sb=document.getElementById('sb-r');
+  sb.textContent=`✓ ${fname} — ${G.raw.length} rows | ${G.mkts.length} markets | ${G.sups.length} suppliers | years: ${G.yrs.join(', ')}`;
+  sb.className='sb on';
+  document.getElementById('sn-r').className='sn done';
+  buildPriPanel();
+  if(G.refLoaded)reMatch();
+  else initEditor();
+}
+
+/* ═══════════════ REFERENCE FILE ═══════════════ */
+function handleRef(f){
+  if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
+  if(ext==='csv')readTxt(f,(t,n)=>procRef(XLSX.read(t,{type:'string'}),n,f.name));
+  else readBuf(f,(b,n)=>procRef(XLSX.read(b,{type:'array',cellStyles:true}),n,f.name));
+}
+function procRef(wb,fname,rawFname){
+  G.log=[];
+  const ws=wb.Sheets[wb.SheetNames[0]];
+  const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  G.refHint=detectHint(rawFname,rows,ws);
+  const refMkts=parseRef(ws,rows);
+  G.cfgs={};G.pendAmb=[];G.ambChoices={};
+  refMkts.forEach(rm=>buildCfg(rm));
+  G.refLoaded=true;
+  renderLog();
+  const na=G.pendAmb.length;
+  const sb=document.getElementById('sb-ref');
+  sb.textContent=`✓ ${fname} — ${refMkts.length} markets | Hint: "${G.refHint||'none'}" | ${Object.keys(G.cfgs).length} matched | ${na} ambiguous`;
+  sb.className=`sb on${na?' w':''}`;
+  if(G.mkts.length){buildPriPanel();if(na)renderAmbPanel();initEditor();}
+}
+
+/* Detect primary hint: filename tokens first, then bold+fill */
+function detectHint(fname,rows,ws){
+  const base=fname.replace(/\.[^.]+$/,'').replace(/[_\-\s]+/g,' ');
+  const tokens=base.split(' ').filter(t=>t.length>1);
+  for(let n=Math.min(4,tokens.length);n>=1;n--){
+    const try_=tokens.slice(0,n).join(' ');
+    if(G.sups.length){const m=mSupFirst(try_);if(m){G.log.push(`<span style="color:var(--grn)">HINT(filename)</span> "${try_}"→"${m}"`);return try_;}}
+    else return try_;
+  }
+  for(let ri=0;ri<(rows||[]).length;ri++){
+    for(const ci of [0,5]){
+      const v=(rows[ri]||[])[ci];
+      if(!v||typeof v!=='string')continue;
+      const n=String(v).trim();
+      if(!isValidComp(n))continue;
+      const cell=ws[XLSX.utils.encode_cell({r:ri,c:ci})];
+      if(cell&&isMSACell(cell)){G.log.push(`<span style="color:var(--grn)">HINT(bold+fill)</span> "${n}"`);return n;}
+    }
+  }
+  return null;
+}
+
+/* Parse reference worksheet — strict market header detection, footer excluded */
+function parseRef(ws,rows){
+  const mkts=[];let i=0;
+  while(i<rows.length){
+    const row=rows[i]||[];
+    if(isRealHdr(row)){
+      const refName=String(row[0]).trim();
+      i++;
+      const yr1s=[],yr2s=[];
+      let lastParent={yr1:null,yr2:null}; // track last non-sub row per side
+      while(i<rows.length){
+        const r=rows[i]||[];
+        if(isRealHdr(r))break;
+        if(isBlank(r)||isColH(r)){i++;continue;}
+        [[0,yr1s,'yr1'],[5,yr2s,'yr2']].forEach(([ci,list,side])=>{
+          const v=r[ci];
+          if(!v||typeof v!=='string')return;
+          const n=String(v).trim();
+          if(!isValidComp(n))return;
+          const addr=XLSX.utils.encode_cell({r:i,c:ci});
+          const cell=ws[addr];
+          const msa=isMSACell(cell);
+          const sub=isSubRow(cell);
+          if(sub){
+            // Mark parent as showSubs=true, don't add as separate entry
+            if(lastParent[side])lastParent[side].showSubs=true;
+          } else {
+            if(!list.some(x=>x.name===n)){
+              const entry={name:n,isMSA:msa,showSubs:false};
+              list.push(entry);
+              lastParent[side]=entry;
+            }
+          }
+        });
+        i++;
+      }
+      G.log.push(`<b>MKT</b> "${refName}" yr1:[${yr1s.map(s=>s.name+(s.showSubs?'*':'')).join(',')}] yr2:[${yr2s.map(s=>s.name+(s.showSubs?'*':'')).join(',')}]`);
+      mkts.push({refName,yr1s,yr2s});
+    }else i++;
+  }
+  return mkts;
+}
+
+/* Strict market header: col A short city/state name, col C = Jan YYYY, not footer */
+function isRealHdr(row){
+  if(!row||!row[0]||typeof row[0]!=='string')return false;
+  if(typeof row[2]!=='string'||!/^jan\s*\d{4}$/i.test(String(row[2]).trim()))return false;
+  const a=String(row[0]).trim();
+  if(a.length>50)return false;
+  if(isFooterText(a))return false;
+  return true;
+}
+const isBlank=r=>!r||r.every(v=>v===null||v===undefined||v==='');
+const isColH=r=>r&&r[2]&&/market\s*share/i.test(String(r[2]||''));
+const isMSACell=c=>{try{if(!c||!c.s)return false;const b=c.s.font&&(c.s.font.bold===true||c.s.font.bold===1);const rgb=((c.s.fill||{}).fgColor||{}).rgb||'';return b&&rgb.replace(/^FF/,'').toUpperCase().includes('A1B1C8');}catch{return false;}};
+/* Detect sub-banner rows: italic OR font size < 12 */
+const isSubRow=c=>{try{if(!c||!c.s||!c.s.font)return false;const it=c.s.font.italic===true||c.s.font.italic===1;const sz=c.s.font.sz;const sm=sz&&sz<12;return it||sm;}catch{return false;}};
+
+function buildCfg(rm){
+  const rawMkt=G.mkts.length?mMkt(rm.refName,G.mkts):null;
+  G.log.push(`<span style="color:${rawMkt?'var(--grn)':'var(--amb)'}">MKT</span> "${rm.refName}"→"${rawMkt||'NO MATCH'}"`);
+  const yr1comps=[],yr2comps=[];
+  const proc=(sups,list,yr)=>{
+    sups.filter(s=>!s.isMSA).forEach(s=>{
+      const res=mCompAll(s.name);
+      if(res.ambiguous){
+        const nn=normN(s.name);
+        const ex=G.pendAmb.find(a=>a.normName===nn);
+        if(ex)ex.instances.push({cfgKey:rawMkt||rm.refName,yr});
+        else G.pendAmb.push({normName:nn,refName:s.name,instances:[{cfgKey:rawMkt||rm.refName,yr}],candidates:res.candidates});
+        G.log.push(`<span style="color:var(--amb)">AMBIG</span>[${rm.refName}/${yr}]"${s.name}"`);
+      } else if(res.match){
+        const entry={...res.match,showSubs:s.showSubs};
+        if(!list.some(c=>sameComp(c,entry)))list.push(entry);
+        G.log.push(`<span style="color:var(--grn)">OK</span>[${rm.refName}/${yr}]"${s.name}"→"${res.match.label}"${s.showSubs?' [subs]':''}`);
+      }
+    });
+  };
+  proc(rm.yr1s,yr1comps,'yr1');
+  proc(rm.yr2s,yr2comps,'yr2');
+  const key=rawMkt||rm.refName;
+  G.cfgs[key]={refName:rm.refName,rawMkt,matched:!!rawMkt,yr1comps,yr2comps};
+}
+
+function reMatch(){
+  if(!G.refLoaded)return;
+  const snap=JSON.parse(JSON.stringify(Object.values(G.cfgs)));
+  G.cfgs={};G.pendAmb=[];G.ambChoices={};
+  if(G.refHint){const m=mSupFirst(G.refHint);if(m&&!G.selMSA)G.selMSA=mkComp(m);}
+  snap.forEach(cfg=>{
+    const rawMkt=mMkt(cfg.refName,G.mkts);
+    const remap=c=>{const found=G.sups.find(s=>s===c.raw)||mSupFirst(c.label);return found?mkComp(found,c.group,c.showSubs):null;};
+    const key=rawMkt||cfg.refName;
+    G.cfgs[key]={refName:cfg.refName,rawMkt,matched:!!rawMkt,yr1comps:cfg.yr1comps.map(remap).filter(Boolean),yr2comps:cfg.yr2comps.map(remap).filter(Boolean)};
+  });
+  initEditor();
+}
+
+/* ═══════════════ MATCHING ═══════════════ */
+const normN=s=>s.toLowerCase().replace(/['.&,]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+
+function mMkt(refName,rawList){
+  if(!rawList.length)return null;
+  const comma=refName.indexOf(',');
+  const city=(comma>0?refName.slice(0,comma):refName).trim().toLowerCase();
+  const state=(comma>0?refName.slice(comma+1):'').trim().toLowerCase();
+  const words=city.replace(/[^a-z0-9\s]/g,' ').split(/\s+/).filter(w=>w);
+  const norm=s=>s.toLowerCase();
+  let c=rawList.filter(m=>words.every(w=>norm(m).includes(w)));
+  if(c.length===1)return c[0];
+  if(c.length>1&&state){const ws=c.filter(m=>norm(m).includes(state));if(ws.length)return ws[0];}
+  if(c.length>1)return c[0];
+  for(const w of [...words].sort((a,b)=>b.length-a.length)){
+    if(w.length<3)continue;
+    const h=rawList.filter(m=>norm(m).includes(w));
+    if(!h.length)continue;
+    if(h.length===1)return h[0];
+    if(state){const ws=h.filter(m=>norm(m).includes(state));if(ws.length)return ws[0];}
+    return h[0];
+  }
+  return null;
+}
+function mSupFirst(ref,list){
+  list=list||G.sups;
+  const r=mSupScore(ref,list);
+  return r.length?r[0].raw:null;
+}
+function mSupScore(ref,list){
+  const nn=normN(ref);const words=nn.split(/\s+/).filter(w=>w.length>2);
+  if(!words.length)return[];
+  return list.map(sup=>{
+    const ns=normN(sup);
+    let sc=words.reduce((s,w)=>ns.includes(w)?s+w.length*3:s,0);
+    const gb=[...(G.rawGroups[sup]||[])].reduce((s,g)=>s+words.reduce((ss,w)=>normN(g).includes(w)?ss+w.length:ss,0),0);
+    return{raw:sup,score:sc+gb};
+  }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
+}
+function mCompAll(ref){
+  const words=normN(ref).split(/\s+/).filter(w=>w.length>2);
+  if(!words.length)return{match:null,ambiguous:false,candidates:[]};
+  const sc=[];
+  const push=(entry,score)=>{const ex=sc.find(x=>sameComp(x.entry,entry));if(ex){if(score>ex.score)ex.score=score;}else sc.push({entry,score});};
+  G.sups.forEach(sup=>{
+    const ns=normN(sup);
+    let s=words.reduce((ss,w)=>ns.includes(w)?ss+w.length*3:ss,0);
+    const gb=[...(G.rawGroups[sup]||[])].reduce((ss,g)=>ss+words.reduce((sss,w)=>normN(g).includes(w)?sss+w.length:sss,0),0);
+    if(s+gb>0)push(mkComp(sup),s+gb);
+  });
+  G.allSubs.forEach(e=>{
+    const ng=normN(e.group);
+    const s=words.reduce((ss,w)=>ng.includes(w)?ss+w.length*4:ss,0);
+    if(s>0)push(e,s);
+  });
+  sc.sort((a,b)=>b.score-a.score);
+  if(!sc.length)return{match:null,ambiguous:false,candidates:[]};
+  if(sc.length===1)return{match:sc[0].entry,ambiguous:false,candidates:[sc[0].entry]};
+  const top=sc[0].score,sec=sc[1].score;
+  const cands=sc.slice(0,8).map(x=>x.entry);
+  if(sec/top<0.5)return{match:sc[0].entry,ambiguous:false,candidates:cands};
+  return{match:null,ambiguous:true,candidates:cands};
+}
+function getYrMkt(base,yr){
+  if(G.raw.some(r=>r.market===base&&r.year===yr))return base;
+  const ym=[...new Set(G.raw.filter(r=>r.year===yr).map(r=>r.market))];
+  const cfg=G.cfgs[base];
+  return(cfg?mMkt(cfg.refName,ym):mMkt(base,ym))||base;
+}
+
+/* ═══════════════ PRIMARY PANEL ═══════════════ */
+function buildPriPanel(){
+  if(!G.mkts.length)return;
+  document.getElementById('s-pri').classList.remove('hidden');
+  const hEl=document.getElementById('pri-hint');
+  if(G.refHint){hEl.textContent=`Reference suggests: "${G.refHint}" — verify and select below`;hEl.classList.remove('hidden');}
+  else hEl.classList.add('hidden');
+  renderPriConfirm();
+  buildSubPanel();
+  if(!document.getElementById('pri-drop').classList.contains('hidden'))openPriDrop();
+}
+function filterPri(){const q=document.getElementById('pri-inp').value;renderPriList(q);document.getElementById('pri-drop').classList.remove('hidden');}
+function openPriDrop(){renderPriList(document.getElementById('pri-inp').value);document.getElementById('pri-drop').classList.remove('hidden');}
+document.addEventListener('click',e=>{if(!e.target.closest('.drop-wrap'))document.getElementById('pri-drop').classList.add('hidden');});
+function renderPriList(q){
+  const el=document.getElementById('pri-drop');el.innerHTML='';
+  const ql=q.toLowerCase();
+  const sug=G.refHint?G.refHint.toLowerCase().split(/\s+/)[0]:'';
+  // Retailers
+  const rList=G.sups.filter(s=>!q||shortSup(s).toLowerCase().includes(ql)||s.toLowerCase().includes(ql));
+  if(rList.length){
+    const hdr=document.createElement('div');hdr.className='dg-lbl';hdr.textContent='Retailers';el.appendChild(hdr);
+    rList.slice(0,40).forEach(s=>{
+      const sh=shortSup(s);const isSel=G.selMSA&&sameComp(G.selMSA,mkComp(s));
+      const isSug=sug&&s.toLowerCase().includes(sug);
+      const d=document.createElement('div');d.className=`di${isSel?' sel':''}`;
+      const gc=[...(G.rawGroups[s]||[])].filter(g=>!/no\s*group/i.test(g));
+      d.innerHTML=`<div class="di-name">${sh}</div>${gc.length?`<div class="di-meta">${gc.length} sub-banner${gc.length>1?'s':''}: ${gc.slice(0,3).join(', ')}${gc.length>3?'…':''}</div>`:''}${isSug?`<div class="di-sug">Suggested</div>`:''}`;
+      d.onclick=()=>{setPri(mkComp(s));document.getElementById('pri-inp').value=sh;document.getElementById('pri-drop').classList.add('hidden');};
+      el.appendChild(d);
+    });
+  }
+  // Sub-banners
+  const sList=G.allSubs.filter(e=>!q||e.group.toLowerCase().includes(ql)||shortSup(e.raw).toLowerCase().includes(ql));
+  if(sList.length){
+    const hdr=document.createElement('div');hdr.className='dg-lbl';hdr.textContent='Sub-banners';el.appendChild(hdr);
+    sList.slice(0,30).forEach(e=>{
+      const isSel=G.selMSA&&sameComp(G.selMSA,e);
+      const d=document.createElement('div');d.className=`di${isSel?' sel':''}`;
+      d.innerHTML=`<div class="di-name">${e.group}</div><div class="di-meta">via ${shortSup(e.raw)}</div>`;
+      d.onclick=()=>{setPri(e);document.getElementById('pri-inp').value=e.group;document.getElementById('pri-drop').classList.add('hidden');};
+      el.appendChild(d);
+    });
+  }
+  if(!el.children.length){const d=document.createElement('div');d.className='di';d.textContent='No matches';el.appendChild(d);}
+}
+function setPri(entry){
+  G.selMSA=entry;
+  G.msaSubCfg={show:false,selSubs:new Set()};
+  // Remove primary from all comp lists
+  Object.values(G.cfgs).forEach(cfg=>{
+    cfg.yr1comps=cfg.yr1comps.filter(c=>!sameComp(c,entry));
+    cfg.yr2comps=cfg.yr2comps.filter(c=>!sameComp(c,entry));
+  });
+  renderPriConfirm();buildSubPanel();renderGrid();updBtn();
+}
+function renderPriConfirm(){
+  const el=document.getElementById('pri-confirm');
+  if(G.selMSA){el.textContent=`✓ Primary: ${G.selMSA.label}`;el.className='ib grn';document.getElementById('sn-p').className='sn done';}
+  else{el.textContent='Not set — search & click above';el.className='ib amb';}
+}
+
+/* ─── PRIMARY SUB-BANNER PANEL ─── */
+function buildSubPanel(){
+  const sec=document.getElementById('s-sub');
+  if(!G.selMSA||G.selMSA.group){sec.classList.add('hidden');return;}
+  // Find all sub-banners for this retailer across all loaded markets/years
+  const grps=[...(G.rawGroups[G.selMSA.raw]||[])].filter(g=>!/no\s*group/i.test(g)).sort();
+  if(!grps.length){sec.classList.add('hidden');return;}
+  sec.classList.remove('hidden');
+  document.getElementById('sub-avail-ct').textContent=`${grps.length} sub-banner${grps.length>1?'s':''} available`;
+  document.getElementById('sub-toggle').checked=G.msaSubCfg.show;
+  const body=document.getElementById('sub-body');
+  body.classList.toggle('hidden',!G.msaSubCfg.show);
+  renderSubChips(grps);
+}
+function renderSubChips(grps){
+  grps=grps||[...(G.rawGroups[G.selMSA?.raw]||[])].filter(g=>!/no\s*group/i.test(g)).sort();
+  const c=document.getElementById('sub-chips');c.innerHTML='';
+  grps.forEach(g=>{
+    const sel=G.msaSubCfg.selSubs.has(g);
+    const chip=document.createElement('span');
+    chip.className='chip '+(sel?'tel':'gray');
+    chip.style.cursor='pointer';chip.style.userSelect='none';
+    chip.innerHTML=`<span>${g}</span>`;
+    chip.onclick=()=>{
+      if(G.msaSubCfg.selSubs.has(g))G.msaSubCfg.selSubs.delete(g);
+      else G.msaSubCfg.selSubs.add(g);
+      renderSubChips(grps);
+    };
+    c.appendChild(chip);
+  });
+}
+function togMsaSubs(){
+  G.msaSubCfg.show=document.getElementById('sub-toggle').checked;
+  document.getElementById('sub-body').classList.toggle('hidden',!G.msaSubCfg.show);
+}
+function selAllSubs(){
+  const grps=[...(G.rawGroups[G.selMSA?.raw]||[])].filter(g=>!/no\s*group/i.test(g));
+  grps.forEach(g=>G.msaSubCfg.selSubs.add(g));renderSubChips(grps);
+}
+function selNoneSubs(){G.msaSubCfg.selSubs.clear();renderSubChips();}
+
+/* ═══════════════ AMBIGUITY PANEL ═══════════════ */
+function renderAmbPanel(){
+  const sec=document.getElementById('s-amb');
+  if(!G.pendAmb.length){sec.classList.add('hidden');return;}
+  document.getElementById('amb-cnt').textContent=`${G.pendAmb.length} unique name${G.pendAmb.length>1?'s':''} to resolve`;
+  const cards=document.getElementById('amb-cards');cards.innerHTML='';
+  G.pendAmb.forEach((amb,ai)=>{
+    const d=document.createElement('div');d.className='amb-card';
+    const insts=amb.instances.map(x=>`${x.cfgKey}(${x.yr})`).join(', ');
+    let h=`<div class="amb-hdr"><span>⚠ "${amb.refName}"</span><span style="background:var(--adm2);color:var(--amb);font-size:10px;padding:2px 7px;border-radius:3px">${amb.instances.length} instance${amb.instances.length>1?'s':''} — resolve once = apply all</span></div>`;
+    h+=`<div style="font-size:10px;color:var(--txt3);margin-bottom:6px">Affects: ${insts}</div>`;
+    h+=`<div class="amb-opts" id="ao-${ai}">`;
+    amb.candidates.forEach((c,ci)=>{
+      const ch=G.ambChoices[amb.normName]&&sameComp(G.ambChoices[amb.normName],c);
+      const grps=c.group?`Sub-banner of: ${shortSup(c.raw)}`:[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g)).slice(0,3).join(', ')||'—';
+      h+=`<div class="ao${ch?' ch':''}" onclick="chooseAmb('${amb.normName}',${ai},${ci})"><div class="ao-name">${c.label}</div><div class="ao-grp">${grps}</div>${c.group?'<div class="ao-type">sub-banner</div>':''}</div>`;
+    });
+    h+=`</div>`;d.innerHTML=h;cards.appendChild(d);
+  });
+  sec.classList.remove('hidden');
+}
+function chooseAmb(nn,ai,ci){
+  const a=G.pendAmb.find(x=>x.normName===nn);if(!a)return;
+  G.ambChoices[nn]=a.candidates[ci];
+  document.querySelectorAll(`#ao-${ai} .ao`).forEach(el=>el.classList.remove('ch'));
+  document.querySelector(`#ao-${ai} .ao:nth-child(${ci+1})`).classList.add('ch');
+}
+function applyAmb(){
+  G.pendAmb.forEach(amb=>{
+    const c=G.ambChoices[amb.normName];if(!c)return;
+    if(G.selMSA&&sameComp(c,G.selMSA))return;
+    amb.instances.forEach(({cfgKey,yr})=>{
+      const cfg=G.cfgs[cfgKey];if(!cfg)return;
+      const list=yr==='yr1'?cfg.yr1comps:cfg.yr2comps;
+      if(!list.some(x=>sameComp(x,c)))list.push({...c});
+    });
+  });
+  G.pendAmb=[];
+  document.getElementById('s-amb').classList.add('hidden');
+  renderGrid();updBtn();
+}
+
+/* ═══════════════ EDITOR ═══════════════ */
+function initEditor(){
+  if(!G.mkts.length)return;
+  document.getElementById('s-ed').classList.remove('hidden');
+  buildYrTags();renderGrid();buildAddSel();updBtn();
+}
+function buildYrTags(){
+  const c=document.getElementById('yr-tags');c.innerHTML='';
+  const s=[...G.yrs].sort((a,b)=>b-a);
+  for(let i=0;i<s.length;i++)for(let j=i+1;j<s.length;j++){
+    const p=[s[i],s[j]],k=p.join('-');
+    const t=document.createElement('span');
+    t.className='chip'+(G.selYP&&G.selYP.join('-')===k?' gray':' blue')+' '+(G.selYP&&G.selYP.join('-')===k?'':'');
+    t.style.cursor='pointer';t.textContent=`${p[0]} vs ${p[1]}`;
+    t.style.borderColor=G.selYP&&G.selYP.join('-')===k?'var(--grn)':'';
+    t.style.background=G.selYP&&G.selYP.join('-')===k?'var(--gdm)':'';
+    t.style.color=G.selYP&&G.selYP.join('-')===k?'var(--grn)':'';
+    t.onclick=()=>{G.selYP=p;buildYrTags();renderGrid();updBtn();};
+    c.appendChild(t);
+  }
+}
+const updBtn=()=>document.getElementById('run-btn').disabled=!(Object.keys(G.cfgs).length>0&&G.selMSA&&G.selYP);
+function buildAddSel(){
+  const sel=document.getElementById('add-mkt-sel');sel.innerHTML='';
+  G.mkts.filter(m=>!G.cfgs[m]).forEach(m=>{const o=document.createElement('option');o.value=m;o.textContent=m;sel.appendChild(o);});
+  // Copy-from list
+  const cf=document.getElementById('copy-from-sel');cf.innerHTML='';
+  Object.keys(G.cfgs).forEach(k=>{const o=document.createElement('option');o.value=k;o.textContent=G.cfgs[k].refName||k;cf.appendChild(o);});
+}
+function showAddMkt(){document.getElementById('add-mkt-sec').classList.remove('hidden');buildAddSel();}
+function togCopy(){
+  const on=document.getElementById('copy-chk').checked;
+  document.getElementById('copy-sec').classList.toggle('hidden',!on);
+}
+function doAddMkt(){
+  const m=document.getElementById('add-mkt-sel').value;if(!m)return;
+  let y1=[],y2=[];
+  if(document.getElementById('copy-chk').checked){
+    const fk=document.getElementById('copy-from-sel').value;
+    if(G.cfgs[fk]){
+      if(document.getElementById('cp-y1').checked)y1=G.cfgs[fk].yr1comps.map(c=>({...c}));
+      if(document.getElementById('cp-y2').checked)y2=G.cfgs[fk].yr2comps.map(c=>({...c}));
+    }
+  }
+  G.cfgs[m]={refName:m,rawMkt:m,matched:true,yr1comps:y1,yr2comps:y2};
+  document.getElementById('add-mkt-sec').classList.add('hidden');
+  document.getElementById('copy-chk').checked=false;
+  document.getElementById('copy-sec').classList.add('hidden');
+  renderGrid();buildAddSel();updBtn();
+}
+
+/* ═══════════════ MARKET GRID ═══════════════ */
+function renderGrid(){
+  _cMap={};_cIdx=0;
+  const grid=document.getElementById('mkt-grid');grid.innerHTML='';
+  const f=document.getElementById('mkt-f').value.toLowerCase();
+  const entries=Object.entries(G.cfgs).filter(([k,c])=>!f||k.toLowerCase().includes(f)||c.refName.toLowerCase().includes(f));
+  document.getElementById('mkt-ct').textContent=`${entries.length} market${entries.length!==1?'s':''}`;
+  entries.forEach(([k,cfg])=>{const idx=_cIdx++;_cMap[idx]=k;grid.appendChild(buildCard(idx,k,cfg));});
+}
+function buildCard(idx,key,cfg){
+  const [y1,y2]=G.selYP||['yr1','yr2'];
+  const compOpts=(excl)=>{
+    let h='<optgroup label="Retailers">';
+    G.sups.filter(s=>!excl.some(c=>sameComp(c,mkComp(s)))&&!(G.selMSA&&sameComp(G.selMSA,mkComp(s)))).forEach(s=>{h+=`<option value="${encV(mkComp(s))}">${shortSup(s)}</option>`;});
+    h+='</optgroup>';
+    if(G.allSubs.length){h+='<optgroup label="Sub-banners">';G.allSubs.filter(e=>!excl.some(c=>sameComp(c,e))&&!(G.selMSA&&sameComp(G.selMSA,e))).forEach(e=>{h+=`<option value="${encV(e)}">${e.group} (${shortSup(e.raw)})</option>`;});h+='</optgroup>';}
+    return h;
+  };
+  const chipHtml=(list,yr)=>list.map(c=>{
+    const ck=compKey(c).replace(/'/g,"\\'");
+    const grpBt=hasGrps(c)?`<span class="cx-s" title="${c.showSubs?'Hide':'Show'} sub-banners" onclick="togSubs(${idx},'${yr}','${compKey(c).replace(/'/g,"\\'")}')">⊞</span>`:'';
+    const cls=c.group?'chip tel'+(c.showSubs?' dashed':''):'chip grn'+(c.showSubs?' dashed':'');
+    return`<span class="${cls}">${c.label}${c.showSubs?` <span style="font-size:9px;opacity:.7">subs↓</span>`:''}${grpBt}<span class="cx" onclick="rmComp(${idx},'${yr}','${ck}')">✕</span></span>`;
+  }).join('');
+  const card=document.createElement('div');
+  card.className='mc'+(cfg.matched?' ref':' unm');
+  card.innerHTML=`<div class="mc-hdr"><div style="flex:1"><div class="mc-name">${cfg.refName||key}</div><div class="mc-raw">→ ${cfg.rawMkt||key}${!cfg.matched?' <span style="color:var(--amb)">⚠</span>':''}</div></div><button class="btn ghost sm" onclick="rmMkt(${idx})">✕</button></div>
+<div class="mc-body">
+<div style="margin-bottom:8px"><span class="chip msa">MSA: ${G.selMSA?G.selMSA.label:'— not set'}</span></div>
+<div class="yr-p"><div class="yr-lbl y1">◀ ${y1}</div><div class="comp-chips">${chipHtml(cfg.yr1comps,'yr1')}</div><div class="ar"><select class="sel-el" id="s1-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr1comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr1')">+ Add</button><button class="btn ghost sm" title="Copy ▶→◀" onclick="sync(${idx},'yr2','yr1')" style="font-size:10px">← Copy</button></div></div>
+<div class="yr-p"><div class="yr-lbl y2">▶ ${y2}</div><div class="comp-chips">${chipHtml(cfg.yr2comps,'yr2')}</div><div class="ar"><select class="sel-el" id="s2-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr2comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr2')">+ Add</button><button class="btn ghost sm" title="Copy ◀→▶" onclick="sync(${idx},'yr1','yr2')" style="font-size:10px">Copy →</button></div></div>
+</div>`;
+  return card;
+}
+function addComp(idx,yr){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const sel=document.getElementById(`s${yr==='yr1'?1:2}-${idx}`);
+  if(!sel||!sel.value)return;
+  const entry=decV(sel.value);if(!entry)return;
+  if(G.selMSA&&sameComp(entry,G.selMSA))return;
+  const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  if(!list.some(c=>sameComp(c,entry)))list.push(entry);
+  renderGrid();
+}
+function rmComp(idx,yr,ck){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const i=list.findIndex(c=>compKey(c)===ck);
+  if(i>=0){list.splice(i,1);renderGrid();}
+}
+function togSubs(idx,yr,ck){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const c=list.find(x=>compKey(x)===ck);if(c){c.showSubs=!c.showSubs;renderGrid();}
+}
+function rmMkt(idx){const k=_cMap[idx];if(k)delete G.cfgs[k];renderGrid();buildAddSel();updBtn();}
+function sync(idx,fromYr,toYr){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const from=fromYr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const to=toYr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  from.forEach(c=>{if(!to.some(x=>sameComp(x,c)))to.push({...c});});
+  renderGrid();
+}
+
+/* ═══════════════ LOG ═══════════════ */
+function renderLog(){document.getElementById('log-el').innerHTML=G.log.join('<br>');document.getElementById('log-tog').classList.remove('hidden');}
+function togLog(){const el=document.getElementById('log-el'),t=document.getElementById('log-tog');const h=!el.classList.contains('hidden');el.classList.toggle('hidden',h);t.textContent=(h?'▸':'▾')+(h?' detection log':' detection log');}
+
+/* ═══════════════ DATA COMPUTATION ═══════════════ */
+function sData(mkt,comp,yr){
+  const m=getYrMkt(mkt,yr);
+  let rows=G.raw.filter(r=>r.market===m&&r.retailer===comp.raw&&r.year===yr);
+  if(comp.group)rows=rows.filter(r=>r.group===comp.group);
+  return{acv:rows.reduce((s,r)=>s+r.acv,0),stores:rows.reduce((s,r)=>s+r.stores,0)};
+}
+function tACV(mkt,yr){const m=getYrMkt(mkt,yr);return G.raw.filter(r=>r.market===m&&r.year===yr).reduce((s,r)=>s+r.acv,0);}
+function tSt(mkt,yr){
+  const m=getYrMkt(mkt,yr),by={};
+  G.raw.filter(r=>r.market===m&&r.year===yr).forEach(r=>by[r.retailer]=(by[r.retailer]||0)+r.stores);
+  return Object.values(by).reduce((s,v)=>s+v,0);
+}
+// "All Other" correctly groups by raw retailer to avoid double-counting sub-banners
+function calcUsed(mkt,yr,msa,comps){
+  const byRaw={};
+  [msa,...comps].filter(Boolean).forEach(c=>{
+    if(!byRaw[c.raw])byRaw[c.raw]={hasParent:false,groups:[]};
+    if(!c.group)byRaw[c.raw].hasParent=true;
+    else if(!byRaw[c.raw].groups.includes(c.group))byRaw[c.raw].groups.push(c.group);
+  });
+  let ua=0,us=0;
+  Object.entries(byRaw).forEach(([raw,info])=>{
+    if(info.hasParent){const d=sData(mkt,mkComp(raw),yr);ua+=d.acv;us+=d.stores;}
+    else info.groups.forEach(g=>{const d=sData(mkt,mkComp(raw,g),yr);ua+=d.acv;us+=d.stores;});
+  });
+  return{ua,us};
+}
+// Sub-banner rows for display (both years, sorted by yr1 stores)
+function getSubRows(mkt,comp,y1,y2){
+  const m1=getYrMkt(mkt,y1),m2=getYrMkt(mkt,y2);
+  const grps=new Set([
+    ...G.raw.filter(r=>r.market===m1&&r.retailer===comp.raw&&r.year===y1&&r.group&&!/no\s*group/i.test(r.group)).map(r=>r.group),
+    ...G.raw.filter(r=>r.market===m2&&r.retailer===comp.raw&&r.year===y2&&r.group&&!/no\s*group/i.test(r.group)).map(r=>r.group)
+  ]);
+  return [...grps].map(g=>{
+    const d1=sData(mkt,mkComp(comp.raw,g),y1);
+    const d2=sData(mkt,mkComp(comp.raw,g),y2);
+    return{group:g,d1,d2};
+  }).sort((a,b)=>b.d1.stores-a.d1.stores);
+}
+// Sort comps by store count in given year (yr1 side sorted by yr1, yr2 by yr2)
+function sortComps(mkt,comps,yr){
+  return [...comps].sort((a,b)=>sData(mkt,b,yr).stores-sData(mkt,a,yr).stores);
+}
+const cSh=p=>p>=20?'sh-h':p>=5?'sh-m':'sh-l';
+const dH=(v1,v2)=>{const d=v1-v2;if(Math.abs(d)<0.05)return'';return`<span class="${d>0?'du':'dd'}">${d>0?'+':''}${d.toFixed(1)}</span>`;};
+
+/* ═══════════════ OUTPUT GENERATION ═══════════════ */
+function genOutput(){
+  const [y1,y2]=G.selYP;
+  const out=document.getElementById('output');out.innerHTML='';
+  for(const [key,cfg] of Object.entries(G.cfgs)){
+    const mkt=cfg.rawMkt||key,msa=G.selMSA;
+    // Sort comps independently per year
+    const yr1c=sortComps(mkt,cfg.yr1comps,y1);
+    const yr2c=sortComps(mkt,cfg.yr2comps,y2);
+    const ta1=tACV(mkt,y1),ta2=tACV(mkt,y2),ts1=tSt(mkt,y1),ts2=tSt(mkt,y2);
+    const maxR=Math.max(yr1c.length,yr2c.length);
+    const blk=document.createElement('div');blk.className='out-blk';
+    let h=`<div class="out-hdr"><span class="odot"></span>${cfg.refName||key}`;
+    if(cfg.matched)h+=`<span class="chip gray" style="font-size:9px;padding:1px 5px">REF</span>`;
+    h+=`<span style="color:var(--txt3);font-size:10px;font-weight:400">${yr1c.length}/${yr2c.length} comps</span></div>`;
+    h+=`<table class="ot"><thead><tr><th class="lft yh" colspan="3">Jan ${y1}</th><td class="sp"></td><th class="lft yh" colspan="3">Jan ${y2}</th></tr>
+<tr style="border-bottom:1px solid var(--bdr2)"><th class="lft">Supplier</th><th>Mkt Share</th><th>Stores</th><td class="sp"></td><th class="lft">Supplier</th><th>Mkt Share</th><th>Stores</th></tr>
+</thead><tbody>`;
+    // MSA row
+    const m1=sData(mkt,msa,y1),m2=sData(mkt,msa,y2);
+    const ms1=ta1?m1.acv/ta1*100:0,ms2=ta2?m2.acv/ta2*100:0;
+    const msaBdg=`<span style="font-size:9px;background:var(--gdm);color:var(--grn);padding:1px 5px;border-radius:2px;margin-left:4px">MSA</span>`;
+    h+=`<tr class="mr"><td class="msac">${msa.label}${msaBdg}</td><td class="rt ${cSh(ms1)}">${ms1.toFixed(1)}%${dH(ms1,ms2)}</td><td class="rt">${m1.stores||'—'}</td><td class="sp"></td><td class="msac">${msa.label}${msaBdg}</td><td class="rt ${cSh(ms2)}">${ms2.toFixed(1)}%</td><td class="rt">${m2.stores||'—'}</td></tr>`;
+    // MSA sub-banner rows — only if toggle enabled and subs selected
+    if(G.msaSubCfg.show && G.msaSubCfg.selSubs.size>0){
+      getSubRows(mkt,msa,y1,y2).filter(s=>G.msaSubCfg.selSubs.has(s.group)).forEach(s=>{
+        const sh1=ta1?s.d1.acv/ta1*100:0,sh2=ta2?s.d2.acv/ta2*100:0;
+        h+=`<tr class="sub-r mr" style="background:rgba(13,33,73,.6)"><td class="lft" style="padding-left:22px;font-style:italic">${s.group}</td><td class="rt">${sh1.toFixed(1)}%</td><td class="rt">${s.d1.stores||'—'}</td><td class="sp"></td><td class="lft" style="padding-left:22px;font-style:italic">${s.group}</td><td class="rt">${sh2.toFixed(1)}%</td><td class="rt">${s.d2.stores||'—'}</td></tr>`;
+      });
+    }
+    // Comp rows (sorted independently)
+    for(let i=0;i<maxR;i++){
+      const c1=yr1c[i],c2=yr2c[i];
+      const d1=c1?sData(mkt,c1,y1):{acv:0,stores:0};
+      const d2=c2?sData(mkt,c2,y2):{acv:0,stores:0};
+      const sh1=c1&&ta1?d1.acv/ta1*100:0,sh2=c2&&ta2?d2.acv/ta2*100:0;
+      const subBdg=c=>c&&c.group?`<span style="font-size:9px;background:var(--tdm);color:var(--tel);padding:1px 4px;border-radius:2px;margin-left:3px">sub</span>`:'';
+      h+=`<tr><td class="lft">${c1?c1.label:'—'}${subBdg(c1)}</td><td class="rt ${cSh(sh1)}">${c1?sh1.toFixed(1)+'%':'—'}</td><td class="rt">${c1&&d1.stores?d1.stores:'—'}</td><td class="sp"></td><td class="lft">${c2?c2.label:'—'}${subBdg(c2)}</td><td class="rt ${cSh(sh2)}">${c2?sh2.toFixed(1)+'%':'—'}</td><td class="rt">${c2&&d2.stores?d2.stores:'—'}</td></tr>`;
+      // Sub-banner rows for comps with showSubs
+      const c1subs=c1&&c1.showSubs?getSubRows(mkt,c1,y1,y2):[];
+      const c2subs=c2&&c2.showSubs?getSubRows(mkt,c2,y2,y1):[];
+      const maxSub=Math.max(c1subs.length,c2subs.length);
+      for(let si=0;si<maxSub;si++){
+        const s1=c1subs[si],s2=c2subs[si];
+        const ss1=s1&&ta1?s1.d1.acv/ta1*100:0,ss2=s2&&ta2?s2.d1.acv/ta2*100:0;
+        h+=`<tr class="sub-r"><td class="lft">${s1?s1.group:'—'}</td><td class="rt">${s1?ss1.toFixed(1)+'%':'—'}</td><td class="rt">${s1&&s1.d1.stores?s1.d1.stores:'—'}</td><td class="sp"></td><td class="lft">${s2?s2.group:'—'}</td><td class="rt">${s2?ss2.toFixed(1)+'%':'—'}</td><td class="rt">${s2&&s2.d1.stores?s2.d1.stores:'—'}</td></tr>`;
+      }
+    }
+    // All Other (using calcUsed to avoid double-counting)
+    const{ua:ua1,us:us1}=calcUsed(mkt,y1,msa,yr1c);
+    const{ua:ua2,us:us2}=calcUsed(mkt,y2,msa,yr2c);
+    const os1=ta1?Math.max(0,ta1-ua1)/ta1*100:0,os2=ta2?Math.max(0,ta2-ua2)/ta2*100:0;
+    const ost1=Math.max(0,ts1-us1),ost2=Math.max(0,ts2-us2);
+    h+=`<tr class="or"><td class="lft">All Other</td><td class="rt">${os1.toFixed(1)}%</td><td class="rt">${ost1||'—'}</td><td class="sp"></td><td class="lft">All Other</td><td class="rt">${os2.toFixed(1)}%</td><td class="rt">${ost2||'—'}</td></tr>`;
+    h+=`</tbody></table>`;
+    blk.innerHTML=h;out.appendChild(blk);
+  }
+  document.getElementById('dl-btn').classList.remove('hidden');
+}
+
+/* ═══════════════ XLSX DOWNLOAD ═══════════════ */
+function dlXLSX(){
+  const[y1,y2]=G.selYP;
+  const wb=XLSX.utils.book_new(),ws={};
+  const wF={patternType:'solid',fgColor:{rgb:'FFFFFF'}};
+  const nF=(sz,b,it,clr)=>({name:'Arial',sz:sz||12,bold:!!b,italic:!!it,...(clr?{color:{rgb:clr}}:{})});
+  const navFill={patternType:'solid',fgColor:{rgb:'0F1B4D'}};
+  const msaFill={patternType:'solid',fgColor:{rgb:'A1B1C8'}};
+  const sH=(sz,al)=>({fill:navFill,font:nF(sz,false,false,'FFFFFF'),...(al?{alignment:al}:{})});
+  const sHC=sz=>sH(sz,{horizontal:'center'});
+  const sM={fill:msaFill,font:nF(12,true,false)};
+  const sMR={fill:msaFill,font:nF(12,true,false),alignment:{horizontal:'right'}};
+  const sN={fill:wF,font:nF(12)};
+  const sNR={fill:wF,font:nF(12),alignment:{horizontal:'right'}};
+  const sSN={fill:wF,font:nF(10,false,true)};
+  const sSNR={fill:wF,font:nF(10,false,true),alignment:{horizontal:'right'}};
+  const sMS={fill:msaFill,font:nF(10,false,true)};
+  const sMSR={fill:msaFill,font:nF(10,false,true),alignment:{horizontal:'right'}};
+  const COLS=['A','B','C','D','E','F','G','H','I'];
+
+  // ── PRE-FILL ENTIRE SHEET WHITE (1000 rows × A-Z) before writing data ──
+  const WS_ROWS=1000, WS_COLS=['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+  for(let ri=1;ri<=WS_ROWS;ri++) WS_COLS.forEach(c=>{ ws[`${c}${ri}`]={v:'',t:'s',s:sN}; });
+  ws['!ref']=`A1:Z${WS_ROWS}`;
+
+  const put=(a,v,t,z,s)=>ws[a]={v,t,s:s||sN,...(z?{z}:{})};
+  const fillR=(r,s)=>COLS.forEach(c=>{ws[`${c}${r}`]={v:'',t:'s',s:s||sN};});
+
+  let r=1;
+  put(`A${r}`,`The following displays a two-year comparison of major markets, as of Jan ${y1} and Jan ${y2}:`,'s',null,sN);
+  r+=2;
+
+  for(const[key,cfg] of Object.entries(G.cfgs)){
+    const mkt=cfg.rawMkt||key,msa=G.selMSA;
+    const yr1c=sortComps(mkt,cfg.yr1comps,y1);
+    const yr2c=sortComps(mkt,cfg.yr2comps,y2);
+    const ta1=tACV(mkt,y1),ta2=tACV(mkt,y2),ts1=tSt(mkt,y1),ts2=tSt(mkt,y2);
+    const maxR=Math.max(yr1c.length,yr2c.length);
+    const dn=cfg.refName||key;
+    // Market header
+    fillR(r,sH(12));put(`A${r}`,dn,'s',null,sH(14));put(`C${r}`,`Jan ${y1}`,'s',null,sHC(12));put(`H${r}`,`Jan ${y2}`,'s',null,sHC(12));r++;
+    fillR(r,sH(12));put(`C${r}`,'Market Share','s',null,sHC(12));put(`D${r}`,'Store Count','s',null,sHC(12));put(`H${r}`,'Market Share','s',null,sHC(12));put(`I${r}`,'Store Count','s',null,sHC(12));r++;
+    // MSA row
+    const m1=sData(mkt,msa,y1),m2=sData(mkt,msa,y2);
+    const{ua:ua1,us:us1}=calcUsed(mkt,y1,msa,yr1c);
+    const{ua:ua2,us:us2}=calcUsed(mkt,y2,msa,yr2c);
+    put(`A${r}`,msa.label,'s',null,sM);put(`C${r}`,ta1?m1.acv/ta1:0,'n','0.0%',sMR);put(`D${r}`,m1.stores||0,'n','0',sMR);
+    put(`F${r}`,msa.label,'s',null,sM);put(`H${r}`,ta2?m2.acv/ta2:0,'n','0.0%',sMR);put(`I${r}`,m2.stores||0,'n','0',sMR);r++;
+    // MSA sub-rows — only if toggle on and subs selected
+    if(G.msaSubCfg.show && G.msaSubCfg.selSubs.size>0){
+      getSubRows(mkt,msa,y1,y2).filter(s=>G.msaSubCfg.selSubs.has(s.group)).forEach(s=>{
+        const sh1=ta1?s.d1.acv/ta1:0,sh2=ta2?s.d2.acv/ta2:0;
+        put(`A${r}`,s.group,'s',null,sMS);put(`C${r}`,sh1,'n','0.0%',sMSR);put(`D${r}`,s.d1.stores||0,'n','0',sMSR);
+        put(`F${r}`,s.group,'s',null,sMS);put(`H${r}`,sh2,'n','0.0%',sMSR);put(`I${r}`,s.d2.stores||0,'n','0',sMSR);r++;
+      });
+    }
+    // Comp rows
+    for(let i=0;i<maxR;i++){
+      const c1=yr1c[i],c2=yr2c[i];
+      const d1=c1?sData(mkt,c1,y1):{acv:0,stores:0};
+      const d2=c2?sData(mkt,c2,y2):{acv:0,stores:0};
+      put(`A${r}`,c1?c1.label:''   ,'s',null,sN);put(`C${r}`,c1&&ta1?d1.acv/ta1:0,'n','0.0%',sNR);put(`D${r}`,c1?d1.stores||0:0,'n','0',sNR);
+      put(`F${r}`,c2?c2.label:''   ,'s',null,sN);put(`H${r}`,c2&&ta2?d2.acv/ta2:0,'n','0.0%',sNR);put(`I${r}`,c2?d2.stores||0:0,'n','0',sNR);r++;
+      // Sub-rows for comps with showSubs
+      const c1subs=c1&&c1.showSubs?getSubRows(mkt,c1,y1,y2):[];
+      const c2subs=c2&&c2.showSubs?getSubRows(mkt,c2,y2,y1):[];
+      const maxSub=Math.max(c1subs.length,c2subs.length);
+      for(let si=0;si<maxSub;si++){
+        const s1=c1subs[si],s2=c2subs[si];
+        put(`A${r}`,s1?s1.group:''  ,'s',null,sSN);put(`C${r}`,s1&&ta1?s1.d1.acv/ta1:0,'n','0.0%',sSNR);put(`D${r}`,s1?s1.d1.stores||0:0,'n','0',sSNR);
+        put(`F${r}`,s2?s2.group:''  ,'s',null,sSN);put(`H${r}`,s2&&ta2?s2.d1.acv/ta2:0,'n','0.0%',sSNR);put(`I${r}`,s2?s2.d1.stores||0:0,'n','0',sSNR);r++;
+      }
+    }
+    // All Other
+    const os1=ta1?Math.max(0,ta1-ua1)/ta1:0,os2=ta2?Math.max(0,ta2-ua2)/ta2:0;
+    const ost1=Math.max(0,ts1-us1),ost2=Math.max(0,ts2-us2);
+    put(`A${r}`,'All Other','s',null,sN);put(`C${r}`,os1,'n','0.0%',sNR);put(`D${r}`,ost1,'n','0',sNR);
+    put(`F${r}`,'All Other','s',null,sN);put(`H${r}`,os2,'n','0.0%',sNR);put(`I${r}`,ost2,'n','0',sNR);
+    r++;r++;
+  }
+  r++;
+  put(`A${r}`,'Source: The Nielsen Company \u2013 TDLinx','s',null,sN);r++;
+  put(`A${r}`,`Copyright \u00A9${y1} The Nielsen Company \u2013 Confidential and Proprietary`,'s',null,sN);
+  ws['!cols']=[{wch:28},{wch:3},{wch:13},{wch:12},{wch:3},{wch:28},{wch:3},{wch:13},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+  XLSX.writeFile(wb,`MSA_MarketShare_Jan${y1}_vs_Jan${y2}.xlsx`);
+}
+</script>
+</body>
+</html>
