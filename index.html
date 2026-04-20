@@ -243,9 +243,19 @@ table.ot td.sp{width:1px;background:var(--bdr);padding:0}
 </div>
 
 <!-- ACTIONS -->
-<div class="fl" style="margin-top:10px">
-  <button class="btn pri fw" id="run-btn" disabled onclick="genOutput()" style="flex:3">Generate MSA Output</button>
-  <button class="btn grn hidden fw" id="dl-btn" onclick="dlXLSX()" style="flex:1;white-space:nowrap">⬇ Download .xlsx</button>
+<div style="margin-top:10px">
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:12px 14px;margin-bottom:8px">
+    <span style="font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.1em;font-weight:600">Sort rows by</span>
+    <div style="display:flex;gap:6px">
+      <span class="chip blue" id="sort-stores" style="cursor:pointer;border-color:var(--acc);background:var(--adm);color:#79c0ff" onclick="setSortMode('stores')">Store Count</span>
+      <span class="chip gray" id="sort-share" style="cursor:pointer" onclick="setSortMode('share')">Market Share</span>
+    </div>
+    <span style="font-size:10px;color:var(--txt3)">Applied to output &amp; Excel download · MSA always first · All Other always last</span>
+  </div>
+  <div class="fl">
+    <button class="btn pri fw" id="run-btn" disabled onclick="genOutput()" style="flex:3">Generate MSA Output</button>
+    <button class="btn grn hidden fw" id="dl-btn" onclick="dlXLSX()" style="flex:1;white-space:nowrap">⬇ Download .xlsx</button>
+  </div>
 </div>
 <div id="output" style="margin-top:16px"></div>
 </div>
@@ -264,7 +274,9 @@ const G={
   ambChoices:{}, // normName→CompEntry
   log:[],
   // primary sub-banner config
-  msaSubCfg:{show:false, selSubs:new Set()} // selSubs = Set<groupName>
+  msaSubCfg:{show:false, selSubs:new Set()}, // selSubs = Set<groupName>
+  // sort mode: 'stores' | 'share'
+  sortMode:'stores'
 };
 let _cMap={},_cIdx=0;
 
@@ -868,9 +880,24 @@ function getSubRows(mkt,comp,y1,y2){
     return{group:g,d1,d2};
   }).sort((a,b)=>b.d1.stores-a.d1.stores);
 }
-// Sort comps by store count in given year (yr1 side sorted by yr1, yr2 by yr2)
+// Sort comps by store count OR market share depending on G.sortMode
 function sortComps(mkt,comps,yr){
-  return [...comps].sort((a,b)=>sData(mkt,b,yr).stores-sData(mkt,a,yr).stores);
+  const ta=tACV(mkt,yr);
+  return [...comps].sort((a,b)=>{
+    if(G.sortMode==='share'){
+      const da=sData(mkt,a,yr),db=sData(mkt,b,yr);
+      const sa=ta?da.acv/ta:0,sb=ta?db.acv/ta:0;
+      return sb-sa;
+    }
+    return sData(mkt,b,yr).stores-sData(mkt,a,yr).stores;
+  });
+}
+function setSortMode(mode){
+  G.sortMode=mode;
+  document.getElementById('sort-stores').className='chip '+(mode==='stores'?'blue':'gray');
+  document.getElementById('sort-stores').style.cssText=mode==='stores'?'cursor:pointer;border-color:var(--acc);background:var(--adm);color:#79c0ff':'cursor:pointer';
+  document.getElementById('sort-share').className='chip '+(mode==='share'?'blue':'gray');
+  document.getElementById('sort-share').style.cssText=mode==='share'?'cursor:pointer;border-color:var(--acc);background:var(--adm);color:#79c0ff':'cursor:pointer';
 }
 const cSh=p=>p>=20?'sh-h':p>=5?'sh-m':'sh-l';
 const dH=(v1,v2)=>{const d=v1-v2;if(Math.abs(d)<0.05)return'';return`<span class="${d>0?'du':'dd'}">${d>0?'+':''}${d.toFixed(1)}</span>`;};
