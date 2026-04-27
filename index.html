@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>MSA Market Share Extractor v5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <style>
-:root{
+/* ══════════ THEME VARIABLES ══════════ */
+:root,[data-theme="dark"]{
   --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--bg4:#22272e;
   --bdr:#30363d;--bdr2:#484f58;
   --txt:#e6edf3;--txt2:#8b949e;--txt3:#6e7681;
@@ -15,128 +19,481 @@
   --amb:#d29922;--adm2:#2d2007;
   --red:#f85149;--rdm:#2d1414;
   --tel:#39d3f0;--tdm:#0a2630;
+  --shadow:0 4px 16px rgba(0,0,0,.45);
+  --shadow-sm:0 2px 8px rgba(0,0,0,.3);
+  --tog-bg:#30363d;--tog-knob:#8b949e;
 }
+[data-theme="light"]{
+  --bg:#f6f8fa;--bg2:#ffffff;--bg3:#f0f2f5;--bg4:#e8eaed;
+  --bdr:#d0d7de;--bdr2:#b8c0ca;
+  --txt:#1f2328;--txt2:#57606a;--txt3:#848d97;
+  --acc:#0969da;--acc2:#0550ae;--adm:#ddeeff;
+  --grn:#1a7f37;--gdm:#dafbe1;--gdm2:rgba(26,127,55,.1);
+  --amb:#7d4e00;--adm2:#fff8c5;
+  --red:#cf222e;--rdm:#ffeef0;
+  --tel:#0597a7;--tdm:#e6f7fb;
+  --shadow:0 4px 16px rgba(0,0,0,.12);
+  --shadow-sm:0 2px 6px rgba(0,0,0,.08);
+  --tog-bg:#d0d7de;--tog-knob:#57606a;
+}
+
+/* ══════════ RESET & BASE ══════════ */
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Courier New',monospace;background:var(--bg);color:var(--txt);min-height:100vh;font-size:13px}
+body{
+  font-family:'Inter',system-ui,sans-serif;
+  background:var(--bg);color:var(--txt);
+  min-height:100vh;font-size:13px;
+  transition:background .25s,color .25s;
+  line-height:1.5;
+}
+.mono{font-family:'JetBrains Mono',monospace}
+
+/* ══════════ LAYOUT ══════════ */
 .app{max-width:1280px;margin:0 auto;padding:20px}
-.hdr{border-bottom:1px solid var(--bdr);padding-bottom:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.hdr h1{font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
-.ver{color:var(--txt3);font-size:10px;border:1px solid var(--bdr);border-radius:3px;padding:2px 7px}
-/* SECTIONS */
-.sec{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:16px 18px;margin-bottom:10px}
-.sec.opt{border-color:rgba(57,211,240,.2)}.sec.acc-b{border-color:rgba(56,139,253,.35)}.sec.warn-b{border-color:rgba(210,153,34,.4)}
+
+/* ══════════ HEADER ══════════ */
+.hdr{
+  border-bottom:1px solid var(--bdr);
+  padding-bottom:14px;margin-bottom:6px;
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  position:relative;
+}
+.hdr::after{
+  content:'';position:absolute;bottom:-1px;left:0;
+  width:80px;height:2px;
+  background:linear-gradient(90deg,var(--acc),transparent);
+  border-radius:1px;
+}
+.hdr-logo{
+  width:28px;height:28px;border-radius:6px;
+  background:linear-gradient(135deg,var(--acc),var(--tel));
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;color:#fff;flex-shrink:0;
+  box-shadow:var(--shadow-sm);
+}
+.hdr-title-wrap{display:flex;flex-direction:column;gap:1px}
+.hdr h1{
+  font-size:13px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--txt);
+}
+.hdr-sub{font-size:10px;color:var(--txt3);letter-spacing:.04em}
+.ver{
+  color:var(--txt3);font-size:10px;
+  border:1px solid var(--bdr);border-radius:99px;
+  padding:2px 8px;font-family:'JetBrains Mono',monospace;
+}
+.hdr-spacer{flex:1}
+
+/* ══════════ THEME TOGGLE ══════════ */
+.theme-toggle{
+  display:flex;align-items:center;gap:7px;
+  cursor:pointer;user-select:none;
+  font-size:11px;color:var(--txt3);
+  padding:4px 8px;border-radius:6px;
+  border:1px solid var(--bdr);
+  background:var(--bg3);
+  transition:border-color .15s,background .15s;
+}
+.theme-toggle:hover{border-color:var(--bdr2);color:var(--txt)}
+.tt-track{
+  width:32px;height:18px;border-radius:99px;
+  background:var(--tog-bg);position:relative;
+  transition:background .2s;flex-shrink:0;
+}
+.tt-knob{
+  position:absolute;top:3px;left:3px;
+  width:12px;height:12px;border-radius:50%;
+  background:var(--tog-knob);
+  transition:transform .2s,background .2s;
+}
+[data-theme="light"] .tt-knob{transform:translateX(14px);background:var(--acc)}
+[data-theme="light"] .tt-track{background:rgba(9,105,218,.25)}
+.tt-icon{font-size:13px;line-height:1}
+
+/* ══════════ PROGRESS TRACKER ══════════ */
+.progress-bar{
+  display:flex;align-items:center;gap:0;
+  margin:10px 0 14px;padding:10px 14px;
+  background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:6px;overflow:hidden;
+}
+.ps{
+  display:flex;align-items:center;gap:6px;
+  flex:1;padding:4px 8px;border-radius:4px;
+  transition:all .2s;cursor:default;
+}
+.ps-num{
+  width:18px;height:18px;border-radius:50%;
+  font-size:10px;font-weight:700;
+  display:inline-flex;align-items:center;justify-content:center;
+  background:var(--bg3);color:var(--txt3);
+  border:1px solid var(--bdr);flex-shrink:0;
+  transition:all .25s;
+}
+.ps-txt{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--txt3);font-weight:600;transition:color .2s}
+.ps-arr{color:var(--bdr2);font-size:11px;flex-shrink:0;margin:0 4px}
+.ps.active .ps-num{background:var(--acc);color:#fff;border-color:transparent;box-shadow:0 0 0 3px rgba(56,139,253,.2)}
+.ps.active .ps-txt{color:var(--acc)}
+.ps.done .ps-num{background:var(--grn);color:#fff;border-color:transparent}
+.ps.done .ps-txt{color:var(--grn)}
+
+/* ══════════ SECTIONS ══════════ */
+.sec{
+  background:var(--bg2);border:1px solid var(--bdr);
+  border-radius:8px;padding:16px 18px;margin-bottom:10px;
+  transition:border-color .2s,box-shadow .2s;
+}
+.sec.opt{border-color:rgba(57,211,240,.2)}
+.sec.acc-b{border-color:rgba(56,139,253,.35)}
+.sec.warn-b{border-color:rgba(210,153,34,.4)}
+.sec:not(.hidden):hover{box-shadow:var(--shadow-sm)}
+
+/* Reveal animation */
+@keyframes secReveal{
+  from{opacity:0;transform:translateY(6px)}
+  to{opacity:1;transform:translateY(0)}
+}
+.sec-anim{animation:secReveal .22s ease-out both}
+
 .sh{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .sh.nb{margin-bottom:0}
-.sn{width:20px;height:20px;border-radius:50%;background:var(--acc);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
-.sn.done{background:var(--grn)}.sn.opt{background:var(--tel)}.sn.w{background:var(--amb)}
-.slbl{font-size:10px;letter-spacing:.14em;color:var(--txt2);text-transform:uppercase;font-weight:600}
+.sn{
+  width:20px;height:20px;border-radius:50%;
+  background:var(--acc);color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;flex-shrink:0;
+  transition:background .2s;
+}
+.sn.done{background:var(--grn)}
+.sn.opt{background:var(--tel)}
+.sn.w{background:var(--amb)}
+.sn.e{background:var(--red)}
+.slbl{font-size:11px;letter-spacing:.1em;color:var(--txt2);text-transform:uppercase;font-weight:600}
 .ssub{font-size:10px;color:var(--txt3);letter-spacing:.04em}
-/* DROP ZONES */
-.dz{border:1px dashed var(--bdr2);border-radius:4px;padding:20px;text-align:center;cursor:pointer;transition:all .15s;color:var(--txt3)}
-.dz:hover,.dz.drag{border-color:var(--acc);background:rgba(56,139,253,.06);color:var(--txt2)}
-.dz.tel:hover,.dz.tel.drag{border-color:var(--tel);background:rgba(57,211,240,.05)}
-.dz input{display:none}.dzi{font-size:18px;opacity:.5;margin-bottom:4px}.dzt{font-size:12px}.dzh{font-size:10px;color:var(--txt3);margin-top:3px}
-/* STATUS BARS */
-.sb{border-left:2px solid var(--grn);background:var(--bg3);border-radius:0 4px 4px 0;padding:6px 11px;font-size:11px;color:var(--grn);margin-top:8px;display:none;line-height:1.5}
-.sb.on{display:block}.sb.w{border-left-color:var(--amb);color:var(--amb)}.sb.e{border-left-color:var(--red);color:var(--red)}
-/* BUTTONS */
-.btn{border:none;border-radius:4px;padding:7px 13px;font-family:inherit;font-size:11px;letter-spacing:.06em;cursor:pointer;transition:all .1s;text-transform:uppercase}
-.btn.pri{background:var(--acc);color:#fff}.btn.pri:hover{background:var(--acc2)}.btn.pri:disabled{background:var(--bg3);color:var(--txt3);cursor:not-allowed}
-.btn.grn{background:var(--gdm);color:var(--grn);border:1px solid rgba(63,185,80,.4)}.btn.grn:hover{background:var(--grn);color:#fff}.btn.grn:disabled{opacity:.4;cursor:not-allowed}
-.btn.ghost{background:transparent;color:var(--txt2);border:1px solid var(--bdr)}.btn.ghost:hover{border-color:var(--bdr2);color:var(--txt)}
-.btn.sm{padding:4px 9px;font-size:10px}.btn.fw{width:100%;margin-top:8px}
-/* SEARCHABLE DROPDOWN */
+
+/* ══════════ DROP ZONES ══════════ */
+.dz{
+  border:1.5px dashed var(--bdr2);border-radius:6px;
+  padding:22px;text-align:center;cursor:pointer;
+  transition:all .18s;color:var(--txt3);
+  position:relative;overflow:hidden;
+}
+.dz:hover,.dz.drag{
+  border-color:var(--acc);
+  background:rgba(56,139,253,.05);color:var(--txt2);
+  box-shadow:0 0 0 4px rgba(56,139,253,.07);
+}
+.dz.tel:hover,.dz.tel.drag{
+  border-color:var(--tel);
+  background:rgba(57,211,240,.05);
+  box-shadow:0 0 0 4px rgba(57,211,240,.07);
+}
+.dz.loaded{
+  border-style:solid;border-color:var(--grn);
+  background:var(--gdm2);cursor:default;
+}
+.dz input{display:none}
+.dzi{
+  font-size:22px;opacity:.5;margin-bottom:6px;
+  display:block;transition:transform .2s,opacity .2s;
+}
+.dz:hover .dzi{opacity:.8;transform:translateY(-2px)}
+.dz.loaded .dzi{opacity:1;transform:none}
+@keyframes dzPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.dz.drag .dzi{animation:dzPulse .6s ease infinite}
+.dzt{font-size:12px;font-weight:500}
+.dz-loaded-info{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.dz-fname{font-size:12px;font-weight:600;color:var(--grn)}
+.dz-meta{font-size:10px;color:var(--txt3);font-family:'JetBrains Mono',monospace}
+.dz-change{
+  font-size:10px;color:var(--txt3);margin-top:6px;
+  text-decoration:underline;cursor:pointer;
+}
+.dz-change:hover{color:var(--acc)}
+
+/* ══════════ STATUS BARS ══════════ */
+.sb{
+  border-left:2px solid var(--grn);background:var(--bg3);
+  border-radius:0 4px 4px 0;padding:6px 11px;
+  font-size:11px;color:var(--grn);margin-top:8px;
+  display:none;line-height:1.5;font-family:'JetBrains Mono',monospace;
+}
+.sb.on{display:block}.sb.w{border-left-color:var(--amb);color:var(--amb)}
+.sb.e{border-left-color:var(--red);color:var(--red)}
+
+/* ══════════ TOASTS ══════════ */
+#toast-rack{
+  position:fixed;bottom:20px;right:20px;
+  display:flex;flex-direction:column;gap:8px;
+  z-index:9999;pointer-events:none;
+}
+.toast{
+  display:flex;align-items:flex-start;gap:10px;
+  background:var(--bg2);border:1px solid var(--bdr2);
+  border-radius:8px;padding:10px 14px;
+  font-size:12px;color:var(--txt);
+  box-shadow:var(--shadow);
+  pointer-events:all;min-width:260px;max-width:360px;
+  animation:toastIn .22s ease-out both;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes toastOut{to{opacity:0;transform:translateY(6px) scale(.97)}}
+.toast.hiding{animation:toastOut .18s ease-in both}
+.toast-icon{font-size:15px;flex-shrink:0;margin-top:1px}
+.toast-body{flex:1}
+.toast-title{font-weight:600;margin-bottom:2px}
+.toast-msg{font-size:11px;color:var(--txt2);font-family:'JetBrains Mono',monospace;word-break:break-word}
+.toast.t-ok{border-left:3px solid var(--grn)}
+.toast.t-ok .toast-icon{color:var(--grn)}
+.toast.t-warn{border-left:3px solid var(--amb)}
+.toast.t-warn .toast-icon{color:var(--amb)}
+.toast.t-err{border-left:3px solid var(--red)}
+.toast.t-err .toast-icon{color:var(--red)}
+.toast-close{cursor:pointer;color:var(--txt3);font-size:14px;opacity:.5;line-height:1;align-self:flex-start}
+.toast-close:hover{opacity:1}
+.toast-bar{height:2px;background:var(--bdr);border-radius:1px;margin-top:6px;overflow:hidden}
+.toast-prog{height:100%;background:var(--grn);border-radius:1px;width:100%;transition:width linear}
+.toast.t-warn .toast-prog{background:var(--amb)}
+.toast.t-err .toast-prog{background:var(--red)}
+
+/* ══════════ BUTTONS ══════════ */
+.btn{
+  border:none;border-radius:6px;padding:7px 14px;
+  font-family:'Inter',system-ui,sans-serif;
+  font-size:11px;letter-spacing:.04em;cursor:pointer;
+  transition:all .12s;text-transform:uppercase;font-weight:600;
+}
+.btn.pri{background:var(--acc);color:#fff;box-shadow:var(--shadow-sm)}
+.btn.pri:hover{background:var(--acc2);transform:translateY(-1px);box-shadow:0 4px 12px rgba(56,139,253,.35)}
+.btn.pri:active{transform:none}
+.btn.pri:disabled{background:var(--bg3);color:var(--txt3);cursor:not-allowed;box-shadow:none;transform:none}
+.btn.grn{background:var(--gdm);color:var(--grn);border:1px solid rgba(63,185,80,.4)}
+.btn.grn:hover{background:var(--grn);color:#fff;transform:translateY(-1px)}
+.btn.grn:disabled{opacity:.4;cursor:not-allowed;transform:none}
+.btn.ghost{background:transparent;color:var(--txt2);border:1px solid var(--bdr)}
+.btn.ghost:hover{border-color:var(--bdr2);color:var(--txt);background:var(--bg3)}
+.btn.sm{padding:4px 10px;font-size:10px}
+.btn.fw{width:100%;margin-top:8px}
+
+/* ══════════ SEARCHABLE DROPDOWN ══════════ */
 .drop-wrap{position:relative}
-.drop-inp{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:12px;padding:7px 10px;border-radius:4px;outline:none;width:100%}
-.drop-inp:focus{border-color:var(--acc)}
-.drop-list{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--bg2);border:1px solid var(--bdr2);border-radius:4px;max-height:260px;overflow-y:auto;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.drop-inp{
+  background:var(--bg3);border:1px solid var(--bdr);
+  color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  font-size:12px;padding:8px 11px;border-radius:6px;
+  outline:none;width:100%;transition:border-color .12s,box-shadow .12s;
+}
+.drop-inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(56,139,253,.15)}
+.drop-list{
+  position:absolute;top:calc(100% + 4px);left:0;right:0;
+  background:var(--bg2);border:1px solid var(--bdr2);
+  border-radius:6px;max-height:260px;overflow-y:auto;
+  z-index:200;box-shadow:var(--shadow);
+}
 .di{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--bdr);transition:background .08s}
 .di:last-child{border-bottom:none}
 .di:hover{background:var(--adm)}
 .di.sel{border-left:2px solid var(--grn);background:var(--gdm2)}
 .di-name{font-size:12px;font-weight:600;color:var(--txt)}
 .di-meta{font-size:10px;color:var(--txt3);margin-top:2px}
-.di-sug{display:inline-block;font-size:9px;background:var(--tdm);color:var(--tel);border-radius:2px;padding:1px 5px;margin-top:2px}
-.dg-lbl{padding:6px 12px 4px;font-size:10px;color:var(--txt3);text-transform:uppercase;letter-spacing:.1em;background:var(--bg3);border-bottom:1px solid var(--bdr);position:sticky;top:0}
-/* CHIPS */
-.chip{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:3px;font-size:11px;border:1px solid;line-height:1.3}
-.chip.grn{background:var(--gdm);color:var(--grn);border-color:rgba(63,185,80,.3)}
-.chip.tel{background:var(--tdm);color:var(--tel);border-color:rgba(57,211,240,.3)}
-.chip.blue{background:var(--adm);color:#79c0ff;border-color:rgba(56,139,253,.3)}
-.chip.msa{background:var(--gdm2);color:var(--grn);border-color:rgba(63,185,80,.4);font-weight:600}
+.di-sug{
+  display:inline-block;font-size:9px;
+  background:var(--tdm);color:var(--tel);
+  border-radius:2px;padding:1px 5px;margin-top:2px;
+}
+.dg-lbl{
+  padding:6px 12px 4px;font-size:10px;color:var(--txt3);
+  text-transform:uppercase;letter-spacing:.1em;
+  background:var(--bg3);border-bottom:1px solid var(--bdr);
+  position:sticky;top:0;
+}
+
+/* ══════════ CHIPS ══════════ */
+.chip{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:99px;
+  font-size:11px;font-weight:500;border:1px solid;line-height:1.3;
+  transition:box-shadow .15s,transform .1s;
+}
+.chip.grn{background:var(--gdm);color:var(--grn);border-color:rgba(63,185,80,.35)}
+.chip.tel{background:var(--tdm);color:var(--tel);border-color:rgba(57,211,240,.35);box-shadow:0 0 0 2px rgba(57,211,240,.12)}
+.chip.blue{background:var(--adm);color:var(--acc);border-color:rgba(56,139,253,.35)}
+.chip.warn{background:var(--rdm);color:var(--red);border-color:rgba(248,81,73,.35)}
+.chip.warn-s{background:rgba(210,153,34,.08);color:var(--amb);border-color:rgba(210,153,34,.35)}
 .chip.gray{background:var(--bg3);color:var(--txt2);border-color:var(--bdr)}
 .chip.dashed{border-style:dashed}
-.cx{cursor:pointer;opacity:.5;font-size:12px}.cx:hover{opacity:1;color:var(--red)}
-.cx-s{cursor:pointer;opacity:.6;font-size:11px;padding:0 1px;border-radius:2px}.cx-s:hover{opacity:1;background:var(--tdm);color:var(--tel)}
-/* LAYOUT */
+.cx{cursor:pointer;opacity:.45;font-size:12px;transition:opacity .1s,color .1s}
+.cx:hover{opacity:1;color:var(--red)}
+.cx-s{cursor:pointer;opacity:.6;font-size:11px;padding:0 2px;border-radius:3px;transition:all .1s}
+.cx-s:hover{opacity:1;background:var(--tdm);color:var(--tel)}
+
+/* ══════════ GRID / LAYOUT ══════════ */
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .fl{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-start}
 .div{height:1px;background:var(--bdr);margin:12px 0}
-.lbl{font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-bottom:6px}
-.ib{background:var(--bg3);border-left:2px solid var(--acc);padding:6px 10px;border-radius:0 3px 3px 0;font-size:11px;color:var(--txt3);line-height:1.6;margin-bottom:8px}
-.ib.grn{border-left-color:var(--grn);color:var(--grn)}.ib.amb{border-left-color:var(--amb);color:var(--amb)}.ib.tel{border-left-color:var(--tel);color:var(--tel)}
-.inp{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:12px;padding:6px 10px;border-radius:4px;outline:none}
-.inp:focus{border-color:var(--acc)}.inp.fw{width:100%}
-.sel-el{background:var(--bg3);border:1px solid var(--bdr);color:var(--txt);font-family:inherit;font-size:11px;padding:5px 7px;border-radius:4px;outline:none;cursor:pointer}
-.sel-el:focus{border-color:var(--acc)}::placeholder{color:var(--txt3)}
-/* AMBIGUITY */
-.amb-card{background:var(--bg3);border:1px solid rgba(210,153,34,.35);border-radius:5px;padding:12px;margin-bottom:9px}
+.lbl{
+  font-size:10px;color:var(--txt2);text-transform:uppercase;
+  letter-spacing:.1em;font-weight:600;margin-bottom:6px;
+}
+.ib{
+  background:var(--bg3);border-left:2px solid var(--acc);
+  padding:7px 11px;border-radius:0 4px 4px 0;
+  font-size:11px;color:var(--txt3);line-height:1.6;
+  margin-bottom:8px;
+}
+.ib.grn{border-left-color:var(--grn);color:var(--grn)}
+.ib.amb{border-left-color:var(--amb);color:var(--amb)}
+.ib.tel{border-left-color:var(--tel);color:var(--tel)}
+.inp{
+  background:var(--bg3);border:1px solid var(--bdr);
+  color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  font-size:12px;padding:7px 10px;border-radius:6px;
+  outline:none;transition:border-color .12s,box-shadow .12s;
+}
+.inp:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(56,139,253,.15)}
+.inp.fw{width:100%}
+.sel-el{
+  background:var(--bg3);border:1px solid var(--bdr);
+  color:var(--txt);font-family:'Inter',system-ui,sans-serif;
+  font-size:11px;padding:5px 7px;border-radius:6px;
+  outline:none;cursor:pointer;transition:border-color .12s;
+}
+.sel-el:focus{border-color:var(--acc)}
+::placeholder{color:var(--txt3)}
+
+/* ══════════ AMBIGUITY ══════════ */
+.amb-card{
+  background:var(--bg3);border:1px solid rgba(210,153,34,.35);
+  border-radius:6px;padding:12px;margin-bottom:9px;
+}
 .amb-hdr{font-size:11px;color:var(--amb);margin-bottom:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .amb-opts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.ao{background:var(--bg4);border:1px solid var(--bdr);border-radius:4px;padding:7px 10px;cursor:pointer;transition:all .1s;max-width:260px}
-.ao:hover{border-color:var(--acc)}.ao.ch{border-color:var(--grn);background:var(--gdm2)}
-.ao-name{font-size:11px;font-weight:600;color:var(--txt)}.ao-grp{font-size:10px;color:var(--txt3);margin-top:2px}
-.ao-type{font-size:9px;background:var(--tdm);color:var(--tel);border-radius:2px;padding:1px 4px;margin-top:3px;display:inline-block}
-/* MARKET GRID */
+.ao{background:var(--bg4);border:1px solid var(--bdr);border-radius:6px;padding:7px 10px;cursor:pointer;transition:all .12s;max-width:260px}
+.ao:hover{border-color:var(--acc);transform:translateY(-1px)}
+.ao.ch{border-color:var(--grn);background:var(--gdm2)}
+.ao-name{font-size:11px;font-weight:600;color:var(--txt)}
+.ao-grp{font-size:10px;color:var(--txt3);margin-top:2px}
+.ao-type{font-size:9px;background:var(--tdm);color:var(--tel);border-radius:3px;padding:1px 4px;margin-top:3px;display:inline-block}
+
+/* ══════════ MARKET GRID ══════════ */
 .mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px;margin-top:10px}
-.mc{background:var(--bg3);border:1px solid var(--bdr);border-radius:6px;overflow:hidden}
+.mc{
+  background:var(--bg3);border:1px solid var(--bdr);
+  border-radius:8px;overflow:hidden;
+  transition:box-shadow .15s,border-color .15s;
+}
+.mc:hover{box-shadow:var(--shadow-sm)}
 .mc.ref{border-color:rgba(57,211,240,.2)}.mc.unm{border-color:rgba(210,153,34,.35)}
 .mc-hdr{background:var(--bg4);padding:9px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:flex-start;gap:8px}
-.mc-name{font-size:12px;font-weight:600;color:var(--txt);flex:1}.mc-raw{font-size:10px;color:var(--txt3);margin-top:2px}
+.mc-name{font-size:12px;font-weight:600;color:var(--txt);flex:1}
+.mc-raw{font-size:10px;color:var(--txt3);margin-top:2px;font-family:'JetBrains Mono',monospace}
 .mc-body{padding:10px 12px}
-.yr-p{background:var(--bg2);border:1px solid var(--bdr);border-radius:4px;padding:8px 10px;margin-bottom:7px}
+.yr-p{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;padding:8px 10px;margin-bottom:7px}
 .yr-p:last-child{margin-bottom:0}
-.yr-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px}
+.yr-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;font-weight:600}
 .yr-lbl.y1{color:var(--acc)}.yr-lbl.y2{color:var(--grn)}
 .comp-chips{display:flex;flex-wrap:wrap;gap:4px;min-height:20px;margin-bottom:6px}
 .ar{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
-/* OUTPUT */
-.out-blk{background:var(--bg2);border:1px solid var(--bdr);border-radius:6px;margin-bottom:12px;overflow:hidden}
-.out-hdr{background:var(--bg3);border-bottom:1px solid var(--bdr);padding:8px 14px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.odot{width:5px;height:5px;border-radius:50%;background:var(--acc);flex-shrink:0}
+
+/* ══════════ OUTPUT TABLE ══════════ */
+.out-blk{background:var(--bg2);border:1px solid var(--bdr);border-radius:8px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow-sm)}
+.out-hdr{
+  background:var(--bg3);border-bottom:1px solid var(--bdr);
+  padding:9px 14px;font-size:11px;font-weight:700;
+  letter-spacing:.07em;text-transform:uppercase;
+  display:flex;align-items:center;gap:7px;flex-wrap:wrap;
+}
+.odot{width:6px;height:6px;border-radius:50%;background:var(--acc);flex-shrink:0}
 table.ot{width:100%;border-collapse:collapse;font-size:12px}
-table.ot thead th{background:var(--bg3);color:var(--txt3);font-size:10px;letter-spacing:.09em;text-transform:uppercase;padding:6px 10px;border-bottom:1px solid var(--bdr);font-weight:400;text-align:right}
+table.ot thead th{
+  background:var(--bg3);color:var(--txt3);
+  font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  padding:6px 10px;border-bottom:1px solid var(--bdr);
+  font-weight:500;text-align:right;
+}
 table.ot thead th.lft{text-align:left}
-table.ot thead th.yh{text-align:center;color:var(--acc);font-weight:600;font-size:11px}
+table.ot thead th.yh{text-align:center;color:var(--acc);font-weight:700;font-size:11px}
 table.ot tbody tr{border-bottom:1px solid var(--bdr);transition:background .07s}
 table.ot tbody tr:last-child{border-bottom:none}
-table.ot tbody tr:hover{background:var(--bg3)}
+/* Row striping */
+table.ot tbody tr:not(.mr):not(.or):not(.sub-r):nth-child(even){background:rgba(0,0,0,.025)}
+[data-theme="light"] table.ot tbody tr:not(.mr):not(.or):not(.sub-r):nth-child(even){background:rgba(0,0,0,.028)}
+table.ot tbody tr:hover:not(.mr){background:var(--bg3)!important}
 table.ot tr.mr{background:var(--adm)}
-table.ot tr.mr:hover{background:#162040}
+table.ot tr.mr:hover{background:var(--adm)!important;filter:brightness(1.08)}
 table.ot tr.or td{color:var(--txt3);font-style:italic}
 table.ot tr.sub-r td{color:var(--txt2);font-style:italic;font-size:11px}
 table.ot tr.sub-r td.lft{padding-left:22px;color:var(--txt3)}
 table.ot td{padding:7px 10px}
 table.ot td.lft{color:var(--txt2)}
-table.ot td.msac{color:var(--grn);font-weight:600}
-table.ot td.rt{text-align:right;font-variant-numeric:tabular-nums}
+table.ot td.msac{color:var(--grn);font-weight:700}
+table.ot td.rt{text-align:right;font-variant-numeric:tabular-nums;font-family:'JetBrains Mono',monospace}
 table.ot td.sp{width:1px;background:var(--bdr);padding:0}
-.sh-h{color:var(--grn)}.sh-m{color:var(--amb)}.sh-l{color:var(--txt2)}
+.sh-h{color:var(--grn);font-weight:600}.sh-m{color:var(--amb)}.sh-l{color:var(--txt2)}
 .du{color:var(--grn);font-size:10px;margin-left:2px}.dd{color:var(--red);font-size:10px;margin-left:2px}
-.log-box{background:var(--bg);border:1px solid var(--bdr);border-radius:4px;padding:10px;font-size:10px;color:var(--txt3);line-height:1.9;max-height:180px;overflow-y:auto;margin-top:8px}
-.lt{font-size:10px;color:var(--txt3);cursor:pointer;letter-spacing:.06em;margin-top:6px;display:inline-block}.lt:hover{color:var(--acc)}
+
+/* ══════════ MISC ══════════ */
+.log-box{
+  background:var(--bg);border:1px solid var(--bdr);
+  border-radius:4px;padding:10px;font-size:10px;
+  color:var(--txt3);line-height:1.9;
+  max-height:180px;overflow-y:auto;margin-top:8px;
+  font-family:'JetBrains Mono',monospace;
+}
+.lt{font-size:10px;color:var(--txt3);cursor:pointer;letter-spacing:.06em;margin-top:6px;display:inline-block}
+.lt:hover{color:var(--acc)}
 .hidden{display:none!important}
+/* Sub-banner selection modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+.modal{
+  background:var(--bg2);border:1px solid var(--bdr2);
+  border-radius:10px;padding:22px;
+  max-width:480px;width:90%;max-height:80vh;overflow-y:auto;
+  box-shadow:var(--shadow);animation:secReveal .2s ease-out both;
+}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.modal-title{font-size:13px;font-weight:700;color:var(--txt);letter-spacing:.04em}
+.modal-close{cursor:pointer;color:var(--txt3);font-size:18px;line-height:1;transition:color .1s}
+.modal-close:hover{color:var(--txt)}
 </style>
 </head>
 <body>
 <div class="app">
-<div class="hdr"><h1>MSA Market Share Extractor</h1><span class="ver">v5</span></div>
+<div class="hdr">
+  <div class="hdr-logo">M</div>
+  <div class="hdr-title-wrap">
+    <h1>MSA Market Share Extractor</h1>
+    <span class="hdr-sub">Nielsen TDLinx · Two-year comparison tool</span>
+  </div>
+  <span class="ver">v5</span>
+  <div class="hdr-spacer"></div>
+  <div class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">
+    <span class="tt-icon" id="tt-icon">🌙</span>
+    <div class="tt-track"><div class="tt-knob"></div></div>
+    <span id="tt-lbl" style="font-size:11px">Dark</span>
+  </div>
+</div>
+
+<!-- PROGRESS TRACKER -->
+<div class="progress-bar" id="progress-bar">
+  <div class="ps" id="ps-1"><span class="ps-num">1</span><span class="ps-txt">Raw Data</span></div>
+  <span class="ps-arr">›</span>
+  <div class="ps" id="ps-2"><span class="ps-num">2</span><span class="ps-txt">Primary Co.</span></div>
+  <span class="ps-arr">›</span>
+  <div class="ps" id="ps-3"><span class="ps-num">3</span><span class="ps-txt">Markets</span></div>
+  <span class="ps-arr">›</span>
+  <div class="ps" id="ps-4"><span class="ps-num">4</span><span class="ps-txt">Output</span></div>
+</div>
 
 <!-- S1: Raw Data -->
 <div class="sec" id="s-raw">
   <div class="sh"><span class="sn" id="sn-r">1</span><span class="slbl">Raw Nielson Data</span><span class="ssub">.xlsx · .xls · .csv</span></div>
-  <div class="dz" id="dz-r" onclick="fiR.click()"><input type="file" id="fiR" accept=".xlsx,.xls,.csv">
-    <div class="dzi">⬆</div><div class="dzt">Drop file or click to browse</div>
+  <div class="dz" id="dz-r" onclick="handleDzClick('fiR',this)"><input type="file" id="fiR" accept=".xlsx,.xls,.csv">
+    <div class="dzi" id="dzi-r">⬆</div>
+    <div class="dzt" id="dzt-r">Drop raw data file or click to browse</div>
+    <div class="dzh" style="font-size:10px;color:var(--txt3);margin-top:4px">.xlsx · .xls · .csv</div>
   </div>
   <div class="sb" id="sb-r"></div>
 </div>
@@ -144,8 +501,10 @@ table.ot td.sp{width:1px;background:var(--bdr);padding:0}
 <!-- REF: Optional -->
 <div class="sec opt" id="s-ref">
   <div class="sh"><span class="sn opt">◆</span><span class="slbl">Prior MSA Reference</span><span class="ssub">Optional</span></div>
-  <div class="dz tel" id="dz-ref" onclick="fiRef.click()"><input type="file" id="fiRef" accept=".xlsx,.xls,.csv">
-    <div class="dzi" style="color:var(--tel)">◆</div><div class="dzt">Drop prior MSA file or click to browse</div>
+  <div class="dz tel" id="dz-ref" onclick="handleDzClick('fiRef',this)"><input type="file" id="fiRef" accept=".xlsx,.xls,.csv">
+    <div class="dzi" id="dzi-ref" style="color:var(--tel)">◆</div>
+    <div class="dzt" id="dzt-ref">Drop prior MSA reference file or click to browse</div>
+    <div class="dzh" style="font-size:10px;color:var(--txt3);margin-top:4px">.xlsx · .xls · .csv · optional</div>
   </div>
   <div class="sb" id="sb-ref"></div>
   <span class="lt hidden" id="log-tog" onclick="togLog()">▸ detection log</span>
@@ -188,6 +547,16 @@ table.ot td.sp{width:1px;background:var(--bdr);padding:0}
       <button class="btn ghost sm" onclick="selNoneSubs()">Clear All</button>
     </div>
   </div>
+</div>
+
+<!-- PRIMARY YEAR OVERRIDE -->
+<div class="sec hidden" id="s-msa-yr" style="border-color:rgba(248,81,73,.35)">
+  <div class="sh" style="margin-bottom:10px">
+    <span class="sn e">!</span>
+    <span class="slbl">Primary Company — Missing Year Data</span>
+    <span class="ssub" id="msa-yr-sub"></span>
+  </div>
+  <div id="msa-yr-body"></div>
 </div>
 
 <!-- AMBIGUITY RESOLUTION -->
@@ -250,6 +619,27 @@ table.ot td.sp{width:1px;background:var(--bdr);padding:0}
 </div>
 <div id="output" style="margin-top:16px"></div>
 </div>
+<div id="toast-rack"></div>
+
+<!-- COMP SUB-BANNER MODAL -->
+<div class="modal-bg hidden" id="csb-modal" onclick="if(event.target===this)closeCompSubModal()">
+  <div class="modal">
+    <div class="modal-hdr">
+      <span class="modal-title" id="csb-title">Select Sub-banners</span>
+      <span class="modal-close" onclick="closeCompSubModal()">✕</span>
+    </div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:10px">Choose which sub-banners appear as indented rows under this company. Does not affect All Other calculation.</div>
+    <div class="fl" id="csb-chips" style="margin-bottom:12px"></div>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button class="btn ghost sm" onclick="csbSelAll()">Select All</button>
+      <button class="btn ghost sm" onclick="csbSelNone()">Clear All</button>
+    </div>
+    <div style="display:flex;gap:7px">
+      <button class="btn pri" style="flex:1" onclick="applyCompSubModal()">Apply</button>
+      <button class="btn ghost" onclick="closeCompSubModal()">Cancel</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ═══════════════ STATE ═══════════════ */
@@ -263,11 +653,17 @@ const G={
   cfgs:{},       // key → {refName,rawMkt,matched,yr1comps,yr2comps}
   pendAmb:[],    // [{normName,refName,instances,candidates}]
   ambChoices:{}, // normName→CompEntry
+  ambSelSubs:{},  // `normName|compKey` → Set<groupName>
   log:[],
   // primary sub-banner config
   msaSubCfg:{show:false, selSubs:new Set()}, // selSubs = Set<groupName>
+  // per-year MSA override: when primary has 0 ACV in a year, use a sub-banner instead
+  // { yr1: CompEntry|null, yr2: CompEntry|null }
+  msaYrOverride:{yr1:null, yr2:null},
   // sort mode: 'stores' | 'share'
-  sortMode:'stores'
+  sortMode:'stores',
+  // comp sub-banner modal state
+  compSubModal:{open:false, cardIdx:null, yr:null, compCk:null}
 };
 let _cMap={},_cIdx=0;
 
@@ -303,7 +699,7 @@ const isValidComp=n=>{
 
 /* ═══════════════ FILE WIRING ═══════════════ */
 const wireDZ=(dz,fi,fn)=>{
-  dz.ondragover=e=>{e.preventDefault();dz.classList.add('drag')};
+  dz.ondragover=e=>{e.preventDefault();if(!dz.classList.contains('loaded'))dz.classList.add('drag')};
   dz.ondragleave=()=>dz.classList.remove('drag');
   dz.ondrop=e=>{e.preventDefault();dz.classList.remove('drag');fn(e.dataTransfer.files[0])};
   fi.onchange=e=>fn(e.target.files[0]);
@@ -344,9 +740,13 @@ function procRaw(wb,fname){
   }));
   G.allSubs.sort((a,b)=>a.group.localeCompare(b.group));
   const sb=document.getElementById('sb-r');
-  sb.textContent=`✓ ${fname} — ${G.raw.length} rows | ${G.mkts.length} markets | ${G.sups.length} suppliers | years: ${G.yrs.join(', ')}`;
+  const sbMsg=`✓ ${fname} — ${G.raw.length} rows | ${G.mkts.length} markets | ${G.sups.length} suppliers | years: ${G.yrs.join(', ')}`;
+  sb.textContent=sbMsg;
   sb.className='sb on';
   document.getElementById('sn-r').className='sn done';
+  setDzLoaded('dz-r','dzi-r','dzt-r',fname,`${G.raw.length} rows · ${G.mkts.length} markets · years: ${G.yrs.join(', ')}`);
+  showToast('Raw Data Loaded',`${G.mkts.length} markets, ${G.sups.length} suppliers`,'ok');
+  updProgress();
   buildPriPanel();
   if(G.refLoaded)reMatch();
   else initEditor();
@@ -365,7 +765,7 @@ function procRef(wb,fname,rawFname){
   const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
   G.refHint=detectHint(rawFname,rows,ws);
   const refMkts=parseRef(ws,rows);
-  G.cfgs={};G.pendAmb=[];G.ambChoices={};
+  G.cfgs={};G.pendAmb=[];G.ambChoices={};G.ambSelSubs={};
   refMkts.forEach(rm=>buildCfg(rm));
   G.refLoaded=true;
   renderLog();
@@ -373,6 +773,8 @@ function procRef(wb,fname,rawFname){
   const sb=document.getElementById('sb-ref');
   sb.textContent=`✓ ${fname} — ${refMkts.length} markets | Hint: "${G.refHint||'none'}" | ${Object.keys(G.cfgs).length} matched | ${na} ambiguous`;
   sb.className=`sb on${na?' w':''}`;
+  setDzLoaded('dz-ref','dzi-ref','dzt-ref',fname,`${refMkts.length} markets · ${Object.keys(G.cfgs).length} matched${na?' · '+na+' ambiguous':''}`,true);
+  showToast('Reference Loaded',`${refMkts.length} markets · hint: "${G.refHint||'none'}"`,na?'warn':'ok');
   if(G.mkts.length){buildPriPanel();if(na)renderAmbPanel();initEditor();}
 }
 
@@ -388,8 +790,8 @@ function detectHint(fname,rows,ws){
   for(let ri=0;ri<(rows||[]).length;ri++){
     for(const ci of [0,5]){
       const v=(rows[ri]||[])[ci];
-      if(!v||typeof v!=='string')continue;
-      const n=String(v).trim();
+      const n=cellStr(v);
+      if(!n)continue;
       if(!isValidComp(n))continue;
       const cell=ws[XLSX.utils.encode_cell({r:ri,c:ci})];
       if(cell&&isMSACell(cell)){G.log.push(`<span style="color:var(--grn)">HINT(bold+fill)</span> "${n}"`);return n;}
@@ -404,7 +806,7 @@ function parseRef(ws,rows){
   while(i<rows.length){
     const row=rows[i]||[];
     if(isRealHdr(row)){
-      const refName=String(row[0]).trim();
+      const refName=cellStr(row[0]);
       i++;
       const yr1s=[],yr2s=[];
       let lastParent={yr1:null,yr2:null}; // track last non-sub row per side
@@ -414,8 +816,10 @@ function parseRef(ws,rows){
         if(isBlank(r)||isColH(r)){i++;continue;}
         [[0,yr1s,'yr1'],[5,yr2s,'yr2']].forEach(([ci,list,side])=>{
           const v=r[ci];
-          if(!v||typeof v!=='string')return;
-          const n=String(v).trim();
+          const n=cellStr(v);
+          if(!n)return;
+          // Skip cells that are year labels (e.g. repeated market name columns in some formats)
+          if(isYearLabel(v))return;
           if(!isValidComp(n))return;
           const addr=XLSX.utils.encode_cell({r:i,c:ci});
           const cell=ws[addr];
@@ -441,21 +845,55 @@ function parseRef(ws,rows){
   return mkts;
 }
 
-/* Strict market header: col A short city/state name, col C = Jan YYYY, not footer */
+/* Normalize a cell value to a string — handles strings, date objects, numbers */
+function cellStr(v){
+  if(v===null||v===undefined||v==='')return null;
+  if(typeof v==='string')return v.trim()||null;
+  if(v instanceof Date){
+    const mo=v.toLocaleString('en-US',{month:'short'});
+    return `${mo} ${v.getFullYear()}`;
+  }
+  // Excel serial date via SheetJS (number in range of dates)
+  if(typeof v==='number'&&v>30000&&v<60000){
+    try{
+      // Convert Excel serial to JS date
+      const d=new Date(Math.round((v-25569)*86400*1000));
+      const mo=d.toLocaleString('en-US',{month:'short'});
+      return `${mo} ${d.getFullYear()}`;
+    }catch{return String(v);}
+  }
+  return String(v).trim()||null;
+}
+
+/* Check if a string looks like a year label: any month (full or abbrev) + optional period + year */
+const MONTH_RE=/^(jan|feb|mar|apr|may|jun|jul|july|aug|sep|sept|oct|nov|dec)\.?\s+\d{4}$/i;
+function isYearLabel(v){
+  const s=cellStr(v);
+  if(!s)return false;
+  return MONTH_RE.test(s.trim());
+}
+
+/* Strict market header: col A = short city/state, col C or col H = year label, not footer */
 function isRealHdr(row){
-  if(!row||!row[0]||typeof row[0]!=='string')return false;
-  if(typeof row[2]!=='string'||!/^jan\s*\d{4}$/i.test(String(row[2]).trim()))return false;
-  const a=String(row[0]).trim();
-  if(a.length>50)return false;
-  if(isFooterText(a))return false;
+  if(!row)return false;
+  // Col A must be a short non-footer string
+  const a=cellStr(row[0]);
+  if(!a||a.length>50||isFooterText(a))return false;
+  // Col C (idx 2) OR col H (idx 7) must look like a year label
+  if(!isYearLabel(row[2])&&!isYearLabel(row[7]))return false;
   return true;
 }
+
 const isBlank=r=>!r||r.every(v=>v===null||v===undefined||v==='');
-const isColH=r=>r&&r[2]&&/market\s*share/i.test(String(r[2]||''));
+const isColH=r=>{
+  // col C might be a date object in some formats — check it's a "Market Share" string
+  const v=r&&r[2];
+  if(!v||typeof v!=='string')return false;
+  return /market\s*share/i.test(v);
+};
 const isMSACell=c=>{try{if(!c||!c.s)return false;const b=c.s.font&&(c.s.font.bold===true||c.s.font.bold===1);const rgb=((c.s.fill||{}).fgColor||{}).rgb||'';return b&&rgb.replace(/^FF/,'').toUpperCase().includes('A1B1C8');}catch{return false;}};
 /* Detect sub-banner rows: italic OR font size < 12 */
 const isSubRow=c=>{try{if(!c||!c.s||!c.s.font)return false;const it=c.s.font.italic===true||c.s.font.italic===1;const sz=c.s.font.sz;const sm=sz&&sz<12;return it||sm;}catch{return false;}};
-
 function buildCfg(rm){
   const rawMkt=G.mkts.length?mMkt(rm.refName,G.mkts):null;
   G.log.push(`<span style="color:${rawMkt?'var(--grn)':'var(--amb)'}">MKT</span> "${rm.refName}"→"${rawMkt||'NO MATCH'}"`);
@@ -485,7 +923,7 @@ function buildCfg(rm){
 function reMatch(){
   if(!G.refLoaded)return;
   const snap=JSON.parse(JSON.stringify(Object.values(G.cfgs)));
-  G.cfgs={};G.pendAmb=[];G.ambChoices={};
+  G.cfgs={};G.pendAmb=[];G.ambChoices={};G.ambSelSubs={};
   if(G.refHint){const m=mSupFirst(G.refHint);if(m&&!G.selMSA)G.selMSA=mkComp(m);}
   snap.forEach(cfg=>{
     const rawMkt=mMkt(cfg.refName,G.mkts);
@@ -536,26 +974,51 @@ function mSupScore(ref,list){
   }).filter(x=>x.score>0).sort((a,b)=>b.score-a.score);
 }
 function mCompAll(ref){
-  const words=normN(ref).split(/\s+/).filter(w=>w.length>2);
+  const nn=normN(ref);
+  const words=nn.split(/\s+/).filter(w=>w.length>2);
   if(!words.length)return{match:null,ambiguous:false,candidates:[]};
   const sc=[];
   const push=(entry,score)=>{const ex=sc.find(x=>sameComp(x.entry,entry));if(ex){if(score>ex.score)ex.score=score;}else sc.push({entry,score});};
+
   G.sups.forEach(sup=>{
     const ns=normN(sup);
-    let s=words.reduce((ss,w)=>ns.includes(w)?ss+w.length*3:ss,0);
-    const gb=[...(G.rawGroups[sup]||[])].reduce((ss,g)=>ss+words.reduce((sss,w)=>normN(g).includes(w)?sss+w.length:sss,0),0);
-    if(s+gb>0)push(mkComp(sup),s+gb);
+    const parentScore=words.reduce((ss,w)=>ns.includes(w)?ss+w.length*4:ss,0);
+    const grpScore=[...(G.rawGroups[sup]||[])].reduce((ss,g)=>{
+      const ng=normN(g);
+      return ss+words.reduce((sss,w)=>ng.includes(w)?sss+w.length:sss,0);
+    },0);
+    const total=parentScore>0?parentScore+grpScore*0.3:grpScore>0?grpScore*0.5:0;
+    if(total>0)push(mkComp(sup),total);
   });
+
+  let hasSubMatch=false;
   G.allSubs.forEach(e=>{
     const ng=normN(e.group);
-    const s=words.reduce((ss,w)=>ng.includes(w)?ss+w.length*4:ss,0);
-    if(s>0)push(e,s);
+    const ns=normN(e.raw);
+    const grpMatch=words.reduce((ss,w)=>ng.includes(w)?ss+w.length*4:ss,0);
+    const parentMatch=words.reduce((ss,w)=>ns.includes(w)?ss+w.length*2:ss,0);
+    const s=grpMatch+parentMatch;
+    if(s>0){
+      push(e,s);
+      if(grpMatch>0){
+        // Always include the parent company as an option — boost it to be prominent
+        const parentEntry=mkComp(e.raw);
+        const existing=sc.find(x=>sameComp(x.entry,parentEntry));
+        const boostScore=s*0.75; // parent gets 75% of sub-banner score so it appears prominently
+        if(existing){ existing.score=Math.max(existing.score,boostScore); }
+        else{ push(parentEntry,boostScore); }
+        hasSubMatch=true;
+      }
+    }
   });
+
   sc.sort((a,b)=>b.score-a.score);
   if(!sc.length)return{match:null,ambiguous:false,candidates:[]};
   if(sc.length===1)return{match:sc[0].entry,ambiguous:false,candidates:[sc[0].entry]};
   const top=sc[0].score,sec=sc[1].score;
   const cands=sc.slice(0,8).map(x=>x.entry);
+  // If any sub-banner matched, always show ambiguity so user picks sub vs whole company
+  if(hasSubMatch)return{match:null,ambiguous:true,candidates:cands};
   if(sec/top<0.5)return{match:sc[0].entry,ambiguous:false,candidates:cands};
   return{match:null,ambiguous:true,candidates:cands};
 }
@@ -615,12 +1078,13 @@ function renderPriList(q){
 function setPri(entry){
   G.selMSA=entry;
   G.msaSubCfg={show:false,selSubs:new Set()};
+  G.msaYrOverride={yr1:null,yr2:null};
   // Remove primary from all comp lists
   Object.values(G.cfgs).forEach(cfg=>{
     cfg.yr1comps=cfg.yr1comps.filter(c=>!sameComp(c,entry));
     cfg.yr2comps=cfg.yr2comps.filter(c=>!sameComp(c,entry));
   });
-  renderPriConfirm();buildSubPanel();renderGrid();updBtn();
+  renderPriConfirm();buildSubPanel();buildMsaYrPanel();renderGrid();updBtn();updProgress();
 }
 function renderPriConfirm(){
   const el=document.getElementById('pri-confirm');
@@ -673,40 +1137,108 @@ function selNoneSubs(){G.msaSubCfg.selSubs.clear();renderSubChips();}
 function renderAmbPanel(){
   const sec=document.getElementById('s-amb');
   if(!G.pendAmb.length){sec.classList.add('hidden');return;}
-  document.getElementById('amb-cnt').textContent=`${G.pendAmb.length} unique name${G.pendAmb.length>1?'s':''} to resolve`;
+  document.getElementById('amb-cnt').textContent=`${G.pendAmb.length} name${G.pendAmb.length>1?'s':''} to resolve`;
   const cards=document.getElementById('amb-cards');cards.innerHTML='';
   G.pendAmb.forEach((amb,ai)=>{
     const d=document.createElement('div');d.className='amb-card';
-    const insts=amb.instances.map(x=>`${x.cfgKey}(${x.yr})`).join(', ');
-    let h=`<div class="amb-hdr"><span>⚠ "${amb.refName}"</span><span style="background:var(--adm2);color:var(--amb);font-size:10px;padding:2px 7px;border-radius:3px">${amb.instances.length} instance${amb.instances.length>1?'s':''} — resolve once = apply all</span></div>`;
-    h+=`<div style="font-size:10px;color:var(--txt3);margin-bottom:6px">Affects: ${insts}</div>`;
-    h+=`<div class="amb-opts" id="ao-${ai}">`;
+    const insts=amb.instances.map(x=>`${x.cfgKey} (${x.yr})`).join(', ');
+    let h=`<div class="amb-hdr">⚠ "${amb.refName}" <span style="font-size:10px;background:var(--adm2);color:var(--amb);padding:2px 7px;border-radius:3px">${amb.instances.length} instance${amb.instances.length>1?'s':''}</span></div>`;
+    h+=`<div style="font-size:10px;color:var(--txt3);margin-bottom:10px">Affects: ${insts}</div>`;
+    h+=`<table style="width:100%;border-collapse:collapse;font-size:12px">`;
+    h+=`<tr style="border-bottom:1px solid var(--bdr)"><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--txt3);font-weight:400;letter-spacing:.08em;text-transform:uppercase">Company</th><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--txt3);font-weight:400;letter-spacing:.08em;text-transform:uppercase">Include as</th><th style="text-align:left;padding:5px 8px;font-size:10px;color:var(--txt3);font-weight:400;letter-spacing:.08em;text-transform:uppercase">Sub-banners to show</th><th style="width:60px"></th></tr>`;
+
     amb.candidates.forEach((c,ci)=>{
-      const ch=G.ambChoices[amb.normName]&&sameComp(G.ambChoices[amb.normName],c);
-      const grps=c.group?`Sub-banner of: ${shortSup(c.raw)}`:[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g)).slice(0,3).join(', ')||'—';
-      h+=`<div class="ao${ch?' ch':''}" onclick="chooseAmb('${amb.normName}',${ai},${ci})"><div class="ao-name">${c.label}</div><div class="ao-grp">${grps}</div>${c.group?'<div class="ao-type">sub-banner</div>':''}</div>`;
+      const isSub=!!c.group;
+      const name=isSub?`${c.group} <span style="font-size:10px;color:var(--txt3)">via ${shortSup(c.raw)}</span>`:c.label;
+      const grps=isSub?[]:([...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g)));
+      const choice=G.ambChoices[amb.normName];
+      const isChosen=choice&&choice.candIdx===ci;
+      const rowBg=isChosen?'background:var(--gdm2)':'';
+
+      let includeCell='';
+      if(isSub){
+        includeCell=`<span style="font-size:11px;color:var(--tel)">Sub-banner only</span>`;
+      } else {
+        includeCell=`<select class="sel-el" id="inc-${ai}-${ci}" onchange="updAmbInclude(${ai},${ci})" style="font-size:11px">
+          <option value="company">Whole company</option>
+          ${grps.map(g=>`<option value="sub:${g}">${g} only</option>`).join('')}
+        </select>`;
+      }
+
+      let subsCell='—';
+      if(!isSub&&grps.length){
+        subsCell=`<select class="sel-el" id="subs-${ai}-${ci}" multiple size="3" style="font-size:10px;min-width:140px;height:auto" title="Hold Ctrl/Cmd to select multiple">
+          ${grps.map(g=>`<option value="${g}">${g}</option>`).join('')}
+        </select><div style="font-size:9px;color:var(--txt3);margin-top:2px">Ctrl+click to multi-select</div>`;
+      }
+
+      h+=`<tr style="border-bottom:1px solid var(--bdr);${rowBg}" id="amb-row-${ai}-${ci}">
+        <td style="padding:8px">${name}</td>
+        <td style="padding:8px">${includeCell}</td>
+        <td style="padding:8px">${subsCell}</td>
+        <td style="padding:8px;text-align:center">
+          <button class="btn ${isChosen?'grn':'ghost'} sm" onclick="chooseAmb('${amb.normName}',${ai},${ci})" id="sel-btn-${ai}-${ci}">${isChosen?'✓ Selected':'Select'}</button>
+        </td>
+      </tr>`;
     });
-    h+=`</div>`;d.innerHTML=h;cards.appendChild(d);
+    h+=`</table>`;
+    d.innerHTML=h;cards.appendChild(d);
   });
   sec.classList.remove('hidden');
 }
+
+function updAmbInclude(ai,ci){} // no-op, value read at apply time
+
 function chooseAmb(nn,ai,ci){
   const a=G.pendAmb.find(x=>x.normName===nn);if(!a)return;
-  G.ambChoices[nn]=a.candidates[ci];
-  document.querySelectorAll(`#ao-${ai} .ao`).forEach(el=>el.classList.remove('ch'));
-  document.querySelector(`#ao-${ai} .ao:nth-child(${ci+1})`).classList.add('ch');
+  G.ambChoices[nn]={candIdx:ci};
+  // Update all rows in this card by row id
+  a.candidates.forEach((_,i)=>{
+    const row=document.getElementById(`amb-row-${ai}-${i}`);
+    const btn=document.getElementById(`sel-btn-${ai}-${i}`);
+    const chosen=i===ci;
+    if(row)row.style.background=chosen?'var(--gdm2)':'';
+    if(btn){btn.textContent=chosen?'✓ Selected':'Select';btn.className=`btn ${chosen?'grn':'ghost'} sm`;}
+  });
 }
+
 function applyAmb(){
-  G.pendAmb.forEach(amb=>{
-    const c=G.ambChoices[amb.normName];if(!c)return;
+  G.pendAmb.forEach((amb,ai)=>{
+    const choice=G.ambChoices[amb.normName];if(!choice&&choice!==0)return;
+    const ci=choice.candIdx??choice;
+    const c=amb.candidates[ci];if(!c)return;
     if(G.selMSA&&sameComp(c,G.selMSA))return;
+
+    // Read "include as" dropdown
+    const incSel=document.getElementById(`inc-${ai}-${ci}`);
+    const incVal=incSel?incSel.value:'company';
+
+    // Read selected sub-banners from multi-select
+    const subsSel=document.getElementById(`subs-${ai}-${ci}`);
+    const selSubs=new Set();
+    if(subsSel)Array.from(subsSel.selectedOptions).forEach(o=>selSubs.add(o.value));
+
+    let entry;
+    if(c.group){
+      // It's already a sub-banner candidate — use as-is
+      entry={...c,selSubs:new Set(),showSubs:false};
+    } else if(incVal.startsWith('sub:')){
+      // User chose a specific sub-banner only
+      const grp=incVal.slice(4);
+      entry=mkComp(c.raw,grp,false);
+      entry.selSubs=new Set();entry.showSubs=false;
+    } else {
+      // Whole company, with optional sub-banner rows
+      entry={...c,selSubs:new Set(selSubs),showSubs:selSubs.size>0};
+    }
+
     amb.instances.forEach(({cfgKey,yr})=>{
       const cfg=G.cfgs[cfgKey];if(!cfg)return;
       const list=yr==='yr1'?cfg.yr1comps:cfg.yr2comps;
-      if(!list.some(x=>sameComp(x,c)))list.push({...c});
+      if(!list.some(x=>sameComp(x,entry)))list.push({...entry,selSubs:new Set(entry.selSubs)});
     });
   });
-  G.pendAmb=[];
+  G.pendAmb=[];G.ambSelSubs={};G.ambChoices={};
   document.getElementById('s-amb').classList.add('hidden');
   renderGrid();updBtn();
 }
@@ -728,7 +1260,7 @@ function buildYrTags(){
     t.style.borderColor=G.selYP&&G.selYP.join('-')===k?'var(--grn)':'';
     t.style.background=G.selYP&&G.selYP.join('-')===k?'var(--gdm)':'';
     t.style.color=G.selYP&&G.selYP.join('-')===k?'var(--grn)':'';
-    t.onclick=()=>{G.selYP=p;buildYrTags();renderGrid();updBtn();};
+    t.onclick=()=>{G.selYP=p;G.msaYrOverride={yr1:null,yr2:null};buildYrTags();renderGrid();buildMsaYrPanel();updBtn();};
     c.appendChild(t);
   }
 }
@@ -780,19 +1312,59 @@ function buildCard(idx,key,cfg){
     if(G.allSubs.length){h+='<optgroup label="Sub-banners">';G.allSubs.filter(e=>!excl.some(c=>sameComp(c,e))&&!(G.selMSA&&sameComp(G.selMSA,e))).forEach(e=>{h+=`<option value="${encV(e)}">${e.group} (${shortSup(e.raw)})</option>`;});h+='</optgroup>';}
     return h;
   };
-  const chipHtml=(list,yr)=>list.map(c=>{
-    const ck=compKey(c).replace(/'/g,"\\'");
-    const grpBt=hasGrps(c)?`<span class="cx-s" title="${c.showSubs?'Hide':'Show'} sub-banners" onclick="togSubs(${idx},'${yr}','${compKey(c).replace(/'/g,"\\'")}')">⊞</span>`:'';
-    const cls=c.group?'chip tel'+(c.showSubs?' dashed':''):'chip grn'+(c.showSubs?' dashed':'');
-    return`<span class="${cls}">${c.label}${c.showSubs?` <span style="font-size:9px;opacity:.7">subs↓</span>`:''}${grpBt}<span class="cx" onclick="rmComp(${idx},'${yr}','${ck}')">✕</span></span>`;
-  }).join('');
+
+  // Get top replacement suggestions for a market+year: retailers with ACV in BOTH years, sorted by yr1 share
+  const getSuggestions=(mkt,excl,count=3)=>{
+    if(!G.selYP)return[];
+    const [y1,y2]=G.selYP;
+    const ta1=tACV(mkt,y1);
+    return G.sups
+      .filter(s=>!(G.selMSA&&sameComp(G.selMSA,mkComp(s)))&&!excl.some(c=>sameComp(c,mkComp(s))))
+      .map(s=>{const d1=sData(mkt,mkComp(s),y1),d2=sData(mkt,mkComp(s),y2);return{s,d1,d2,sh1:ta1?d1.acv/ta1*100:0};})
+      .filter(x=>x.d1.acv>0&&x.d2.acv>0)
+      .sort((a,b)=>b.sh1-a.sh1)
+      .slice(0,count);
+  };
+
+  const chipHtml=(list,yr,mkt)=>{
+    const [cy1,cy2]=G.selYP||[y1,y2];
+    return list.map(c=>{
+      const ck=compKey(c).replace(/'/g,"\\'");
+      const grps=[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g));
+      const hasSubs=!c.group&&grps.length>0;
+      const selCount=c.selSubs?c.selSubs.size:0;
+      const grpBt=hasSubs?`<span class="cx-s" title="Select sub-banners" onclick="openCompSubModal(${idx},'${yr}','${ck}')" style="padding:0 3px;font-size:11px">⊞${selCount?` ${selCount}`:''}</span>`:'';
+      // Check for zero ACV in either year
+      const d1=sData(mkt,c,cy1),d2=sData(mkt,c,cy2);
+      const noY1=d1.acv===0,noY2=d2.acv===0;
+      const hasZero=noY1||noY2;
+      const hasActiveSubs=hasSubs&&c.showSubs&&selCount>0;
+      const cls=c.group?'chip tel':(hasZero?'chip warn-s':'chip grn')+(hasActiveSubs?' dashed':'');
+      const warnBdg=hasZero?`<span title="${noY1?cy1+' ':''}${noY2?cy2:''}:no data" style="font-size:9px;color:var(--red);margin-left:2px">⚠${noY1&&noY2?'both':noY1?cy1:cy2}</span>`:'';
+      let html=`<span class="${cls}">${c.label}${warnBdg}${hasActiveSubs?`<span style="font-size:9px;opacity:.7;margin-left:2px">↓${selCount}</span>`:''}${grpBt}<span class="cx" onclick="rmComp(${idx},'${yr}','${ck}')">✕</span></span>`;
+      // If has zero, show replacement suggestions inline
+      if(hasZero){
+        const excl=[...list,...(yr==='yr1'?cfg.yr2comps:cfg.yr1comps)];
+        const sugs=getSuggestions(mkt,excl);
+        if(sugs.length){
+          html+=`<div style="font-size:10px;color:var(--amb);margin:4px 0 2px">Replace with:</div>`;
+          sugs.forEach(({s,sh1})=>{
+            html+=`<span class="chip warn-s" style="cursor:pointer;margin-right:4px;margin-bottom:4px" onclick="swapComp(${idx},'${yr}','${ck}','${encV(mkComp(s)).replace(/'/g,"\\'")}')">+ ${shortSup(s)} (${sh1.toFixed(1)}%)</span>`;
+          });
+        }
+      }
+      return html;
+    }).join('');
+  };
+
   const card=document.createElement('div');
   card.className='mc'+(cfg.matched?' ref':' unm');
-  card.innerHTML=`<div class="mc-hdr"><div style="flex:1"><div class="mc-name">${cfg.refName||key}</div><div class="mc-raw">→ ${cfg.rawMkt||key}${!cfg.matched?' <span style="color:var(--amb)">⚠</span>':''}</div></div><button class="btn ghost sm" onclick="rmMkt(${idx})">✕</button></div>
+  const mkt=cfg.rawMkt||key;
+  card.innerHTML=`<div class="mc-hdr"><div style="flex:1"><div class="mc-name">${cfg.refName||key}</div><div class="mc-raw">→ ${mkt}${!cfg.matched?' <span style="color:var(--amb)">⚠</span>':''}</div></div><button class="btn ghost sm" onclick="rmMkt(${idx})">✕</button></div>
 <div class="mc-body">
 <div style="margin-bottom:8px"><span class="chip msa">MSA: ${G.selMSA?G.selMSA.label:'— not set'}</span></div>
-<div class="yr-p"><div class="yr-lbl y1">◀ ${y1}</div><div class="comp-chips">${chipHtml(cfg.yr1comps,'yr1')}</div><div class="ar"><select class="sel-el" id="s1-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr1comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr1')">+ Add</button><button class="btn ghost sm" title="Copy ▶→◀" onclick="sync(${idx},'yr2','yr1')" style="font-size:10px">← Copy</button></div></div>
-<div class="yr-p"><div class="yr-lbl y2">▶ ${y2}</div><div class="comp-chips">${chipHtml(cfg.yr2comps,'yr2')}</div><div class="ar"><select class="sel-el" id="s2-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr2comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr2')">+ Add</button><button class="btn ghost sm" title="Copy ◀→▶" onclick="sync(${idx},'yr1','yr2')" style="font-size:10px">Copy →</button></div></div>
+<div class="yr-p"><div class="yr-lbl y1">◀ ${y1}</div><div class="comp-chips">${chipHtml(cfg.yr1comps,'yr1',mkt)}</div><div class="ar"><select class="sel-el" id="s1-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr1comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr1')">+ Add</button><button class="btn ghost sm" title="Copy ▶→◀" onclick="sync(${idx},'yr2','yr1')" style="font-size:10px">← Copy</button></div></div>
+<div class="yr-p"><div class="yr-lbl y2">▶ ${y2}</div><div class="comp-chips">${chipHtml(cfg.yr2comps,'yr2',mkt)}</div><div class="ar"><select class="sel-el" id="s2-${idx}" style="flex:1;min-width:0">${compOpts(cfg.yr2comps)}</select><button class="btn ghost sm" onclick="addComp(${idx},'yr2')">+ Add</button><button class="btn ghost sm" title="Copy ◀→▶" onclick="sync(${idx},'yr1','yr2')" style="font-size:10px">Copy →</button></div></div>
 </div>`;
   return card;
 }
@@ -812,10 +1384,67 @@ function rmComp(idx,yr,ck){
   const i=list.findIndex(c=>compKey(c)===ck);
   if(i>=0){list.splice(i,1);renderGrid();}
 }
+function swapComp(idx,yr,oldCk,newEncV){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const i=list.findIndex(c=>compKey(c)===oldCk);
+  const newEntry=decV(newEncV);
+  if(i>=0&&newEntry){list.splice(i,1,newEntry);}
+  else if(newEntry&&!list.some(c=>sameComp(c,newEntry)))list.push(newEntry);
+  renderGrid();
+}
 function togSubs(idx,yr,ck){
   const k=_cMap[idx];if(!k||!G.cfgs[k])return;
   const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
   const c=list.find(x=>compKey(x)===ck);if(c){c.showSubs=!c.showSubs;renderGrid();}
+}
+
+/* ── COMP SUB-BANNER MODAL ── */
+let _csbTemp=new Set(); // temp selections while modal is open
+function openCompSubModal(idx,yr,ck){
+  const k=_cMap[idx];if(!k||!G.cfgs[k])return;
+  const list=yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const c=list.find(x=>compKey(x)===ck.replace(/\\'/g,"'"));
+  if(!c)return;
+  G.compSubModal={open:true,cardIdx:idx,yr,compCk:compKey(c)};
+  const grps=[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g)).sort();
+  if(!grps.length)return;
+  _csbTemp=new Set(c.selSubs||[]);
+  document.getElementById('csb-title').textContent=`Sub-banners — ${c.label}`;
+  renderCsbChips(grps);
+  document.getElementById('csb-modal').classList.remove('hidden');
+}
+function renderCsbChips(grps){
+  const el=document.getElementById('csb-chips');el.innerHTML='';
+  grps=grps||[...(G.rawGroups[G.compSubModal.raw]||[])].filter(g=>!/no\s*group/i.test(g)).sort();
+  grps.forEach(g=>{
+    const sel=_csbTemp.has(g);
+    const chip=document.createElement('span');
+    chip.className='chip '+(sel?'tel':'gray');chip.style.cursor='pointer';chip.style.userSelect='none';
+    chip.textContent=g;
+    chip.onclick=()=>{sel?_csbTemp.delete(g):_csbTemp.add(g);renderCsbChips(grps);};
+    el.appendChild(chip);
+  });
+}
+function csbSelAll(){
+  const k=_cMap[G.compSubModal.cardIdx];if(!k)return;
+  const list=G.compSubModal.yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const c=list.find(x=>compKey(x)===G.compSubModal.compCk);if(!c)return;
+  const grps=[...(G.rawGroups[c.raw]||[])].filter(g=>!/no\s*group/i.test(g));
+  grps.forEach(g=>_csbTemp.add(g));
+  renderCsbChips(grps);
+}
+function csbSelNone(){_csbTemp.clear();renderCsbChips();}
+function applyCompSubModal(){
+  const k=_cMap[G.compSubModal.cardIdx];if(!k||!G.cfgs[k])return;
+  const list=G.compSubModal.yr==='yr1'?G.cfgs[k].yr1comps:G.cfgs[k].yr2comps;
+  const c=list.find(x=>compKey(x)===G.compSubModal.compCk);
+  if(c){c.selSubs=new Set(_csbTemp);c.showSubs=_csbTemp.size>0;}
+  closeCompSubModal();renderGrid();
+}
+function closeCompSubModal(){
+  document.getElementById('csb-modal').classList.add('hidden');
+  G.compSubModal={open:false,cardIdx:null,yr:null,compCk:null};
 }
 function rmMkt(idx){const k=_cMap[idx];if(k)delete G.cfgs[k];renderGrid();buildAddSel();updBtn();}
 function sync(idx,fromYr,toYr){
@@ -826,15 +1455,251 @@ function sync(idx,fromYr,toYr){
   renderGrid();
 }
 
-/* ═══════════════ LOG ═══════════════ */
+// Get the effective MSA comp for a given year — uses per-year override if set
+function getMSAForYr(yr){
+  if(!G.selMSA)return null;
+  const key=yr===G.selYP?.[0]?'yr1':'yr2';
+  return G.msaYrOverride[key]||G.selMSA;
+}
+
+// True if MSA (or its current override) has any ACV data in this year across any market
+function msaHasDataInYr(yr){
+  if(!G.selMSA)return true;
+  const m=getMSAForYr(yr);
+  return G.raw.some(r=>r.retailer===m.raw&&r.year===yr&&r.acv>0&&(!m.group||r.group===m.group));
+}
+
+/* Search the SPECIFIC YEAR's raw data for anything resembling the primary company name.
+   Returns array of CompEntry candidates (retailers + group-under-any-parent) that have ACV > 0.
+   Key fix: scans G.raw filtered to `yr` directly, so cross-parent groups like
+   "Family Dollar" (under "Dollar Tree Inc" in 2024) are always found. */
+function findMsaCandidatesInYr(yr){
+  if(!G.selMSA)return[];
+
+  // Derive match words from BOTH the display label AND the raw retailer string
+  // (covers cases where one has words the other doesn't)
+  const msaWords=[...new Set([
+    ...normN(G.selMSA.label).split(/\s+/),
+    ...normN(G.selMSA.raw).split(/\s+/)
+  ])].filter(w=>w.length>2);
+  if(!msaWords.length)return[];
+
+  const score=(str)=>str?msaWords.reduce((s,w)=>normN(str).includes(w)?s+w.length:s,0):0;
+
+  const seen=new Set();
+  const results=[];
+
+  // Helper — only add if not duplicate AND there is real ACV data in this year
+  const add=(raw,group,sc)=>{
+    const k=`${raw}|||${group||''}`;
+    if(seen.has(k))return; seen.add(k);
+    if(sc<=0)return;
+    results.push({entry:mkComp(raw,group||null),score:sc});
+  };
+
+  // ── Scan the target year's raw data directly ──────────────────────────────
+  // This replaces the old approach of searching G.rawGroups (year-agnostic),
+  // which could miss groups that only exist under a *different* parent in a
+  // given year (e.g. "Family Dollar" under "Dollar Tree Inc" in 2024 vs
+  // "Family Dollar General" as its own top-level retailer in 2026).
+  const yrRows=G.raw.filter(r=>r.year===yr&&r.acv>0);
+
+  // Step 1: Top-level retailer name matches in this year
+  const yrRetailers=[...new Set(yrRows.map(r=>r.retailer))];
+  yrRetailers.forEach(sup=>{
+    const sc=score(sup)+score(shortSup(sup));
+    add(sup,null,sc);
+  });
+
+  // Step 2: Group name matches under ANY parent retailer in this year
+  //   ← this is the critical fix for cross-parent discovery
+  const grpSeen=new Set();
+  yrRows.forEach(r=>{
+    if(!r.group||/no\s*group/i.test(r.group))return;
+    const gk=`${r.retailer}|||${r.group}`;
+    if(grpSeen.has(gk))return; grpSeen.add(gk);
+    const grpSc=score(r.group);
+    if(grpSc>0){
+      // Group name match — weighted 2× because the group name IS the entity
+      add(r.retailer,r.group,grpSc*2);
+      // Also surface the whole parent company so the user can pick it too
+      const parSc=score(r.retailer)+score(shortSup(r.retailer));
+      add(r.retailer,null,Math.max(parSc,grpSc*0.5));
+    }
+  });
+
+  // Step 3: Always include an exact retailer-string match (highest priority)
+  if(yrRetailers.includes(G.selMSA.raw)){
+    const k=`${G.selMSA.raw}|||`;
+    if(!seen.has(k)){seen.add(k);results.push({entry:mkComp(G.selMSA.raw,null),score:9999});}
+  }
+
+  return results.filter(r=>r.score>0).sort((a,b)=>b.score-a.score);
+}
+
+// Build the per-year MSA override panel
+function buildMsaYrPanel(){
+  const sec=document.getElementById('s-msa-yr');
+  if(!G.selMSA||!G.selYP){sec.classList.add('hidden');return;}
+  const[y1,y2]=G.selYP;
+  const missing=[];
+  if(!msaHasDataInYr(y1))missing.push({yr:y1,key:'yr1'});
+  if(!msaHasDataInYr(y2))missing.push({yr:y2,key:'yr2'});
+  if(!missing.length){sec.classList.add('hidden');return;}
+  sec.classList.remove('hidden');
+  document.getElementById('msa-yr-sub').textContent=`${missing.map(m=>m.yr).join(' & ')} — no direct data`;
+
+  let html='';
+  missing.forEach(({yr,key})=>{
+    const ov=G.msaYrOverride[key];
+    const candidates=findMsaCandidatesInYr(yr);
+    html+=`<div style="background:var(--bg3);border:1px solid var(--bdr);border-radius:5px;padding:13px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:3px">⚠ ${yr} — "${G.selMSA.label}" not found in raw data</div>
+      <div style="font-size:10px;color:var(--txt3);margin-bottom:10px">The company may appear under a different name or as a sub-banner of another retailer in ${yr}. Select the correct entry below.</div>`;
+
+    if(!candidates.length){
+      html+=`<input class="inp fw" id="ovr-srch-${key}" placeholder="Search all ${yr} data by name or parent retailer…" oninput="filterOvrCands('${key}')" style="margin-bottom:9px;font-size:11px">`;
+      html+=`<div id="ovr-cands-${key}" style="display:flex;flex-wrap:wrap;gap:7px;max-height:260px;overflow-y:auto"></div>`;
+      html+=`<div style="font-size:11px;color:var(--amb);margin-top:6px">No similar names found automatically in ${yr} raw data — use the search box above to find the entry by any part of its name or parent company.</div>`;
+    } else {
+      // Also offer a search/filter input
+      html+=`<input class="inp fw" id="ovr-srch-${key}" placeholder="Search all ${yr} data by name or parent retailer…" oninput="filterOvrCands('${key}')" style="margin-bottom:9px;font-size:11px">`;
+      html+=`<div id="ovr-cands-${key}" style="display:flex;flex-wrap:wrap;gap:7px;max-height:260px;overflow-y:auto">`;
+      candidates.forEach((c,ci)=>{
+        const isSet=ov&&sameComp(ov,c.entry);
+        const name=c.entry.group||shortSup(c.entry.raw);
+        const parentLabel=c.entry.group?`sub-banner of ${shortSup(c.entry.raw)}`:`retailer`;
+        // Store entry as JSON attr
+        const entryAttr=JSON.stringify({raw:c.entry.raw,group:c.entry.group||null}).replace(/"/g,'&quot;');
+        html+=`<div class="ovr-tile" onclick="pickOvrCand('${key}',this)" data-entry="${entryAttr}"
+          style="cursor:pointer;padding:8px 12px;border-radius:4px;border:1px solid ${isSet?'var(--grn)':'var(--bdr)'};background:${isSet?'var(--gdm)':'var(--bg4)'};min-width:130px;transition:all .1s">
+          <div style="font-size:12px;font-weight:600;color:${isSet?'var(--grn)':'var(--txt)'};line-height:1.3">${name}</div>
+          <div style="font-size:10px;color:var(--txt3);margin-top:2px">${parentLabel}</div>
+          <div style="font-size:9px;color:var(--grn);margin-top:3px">★ suggested</div>
+        </div>`;
+      });
+      html+=`</div>`;
+    }
+
+    if(ov){
+      const ovName=ov.group?`${ov.group} (via ${shortSup(ov.raw)})`:shortSup(ov.raw);
+      html+=`<div style="margin-top:10px;font-size:11px;color:var(--grn)">✓ Override set: "${ovName}" for ${yr}</div>
+        <button class="btn ghost sm" style="margin-top:6px" onclick="clearMsaYrOverride('${key}')">Clear</button>`;
+    }
+    html+=`</div>`;
+  });
+  document.getElementById('msa-yr-body').innerHTML=html;
+}
+
+function filterOvrCands(key){
+  const q=(document.getElementById(`ovr-srch-${key}`)?.value||'').toLowerCase().trim();
+  const yr=key==='yr1'?G.selYP?.[0]:G.selYP?.[1];
+  const container=document.getElementById(`ovr-cands-${key}`);
+  if(!container||!yr)return;
+
+  // Remove stale dynamic search tiles from a previous keystroke
+  container.querySelectorAll('.ovr-dyn').forEach(t=>t.remove());
+
+  const staticTiles=[...container.querySelectorAll('.ovr-tile:not(.ovr-dyn)')];
+  if(!q){
+    staticTiles.forEach(t=>{t.style.display='';});
+    return;
+  }
+
+  // 1. Filter the pre-scored static tiles
+  staticTiles.forEach(t=>{
+    t.style.display=t.textContent.toLowerCase().includes(q)?'':'none';
+  });
+
+  // 2. Live-search ALL year-specific raw data for additional matches that
+  //    were not in the auto-scored candidate list (e.g. a group with a low
+  //    fuzzy score against the MSA name words that the user recognises).
+  const ov=G.msaYrOverride[key];
+  const alreadyKeys=new Set();
+  staticTiles.forEach(t=>{
+    try{const d=JSON.parse(t.dataset.entry.replace(/&quot;/g,'"'));alreadyKeys.add(`${d.raw}|||${d.group||''}`);}catch{}
+  });
+
+  const dynEntries=new Map();
+  G.raw.filter(r=>r.year===yr&&r.acv>0).forEach(r=>{
+    // Retailer name match
+    const retK=`${r.retailer}|||`;
+    if(!alreadyKeys.has(retK)){
+      const retLbl=shortSup(r.retailer);
+      if(retLbl.toLowerCase().includes(q)||r.retailer.toLowerCase().includes(q))
+        dynEntries.set(retK,{raw:r.retailer,group:null,label:retLbl,sub:'retailer'});
+    }
+    // Group name match (cross-parent — the key scenario)
+    if(r.group&&!/no\s*group/i.test(r.group)){
+      const grpK=`${r.retailer}|||${r.group}`;
+      if(!alreadyKeys.has(grpK)){
+        if(r.group.toLowerCase().includes(q)||shortSup(r.retailer).toLowerCase().includes(q))
+          dynEntries.set(grpK,{raw:r.retailer,group:r.group,label:r.group,sub:`sub-banner of ${shortSup(r.retailer)}`});
+      }
+    }
+  });
+
+  dynEntries.forEach(({raw,group,label,sub})=>{
+    const isSet=ov&&sameComp(mkComp(raw,group||null),ov);
+    const ea=JSON.stringify({raw,group:group||null}).replace(/"/g,'&quot;');
+    const t=document.createElement('div');
+    t.className='ovr-tile ovr-dyn';
+    t.dataset.entry=ea;
+    t.onclick=function(){pickOvrCand(key,this);};
+    t.style.cssText=`cursor:pointer;padding:8px 12px;border-radius:4px;border:1px solid ${isSet?'var(--grn)':'rgba(57,211,240,.3)'};background:${isSet?'var(--gdm)':'var(--bg4)'};min-width:130px;transition:all .1s`;
+    t.innerHTML=`<div style="font-size:12px;font-weight:600;color:${isSet?'var(--grn)':'var(--txt)'};line-height:1.3">${label}</div><div style="font-size:10px;color:var(--txt3);margin-top:2px">${sub}</div><div style="font-size:9px;color:var(--tel);margin-top:3px">↑ search result</div>`;
+    container.appendChild(t);
+  });
+}
+
+function pickOvrCand(key,el){
+  const data=JSON.parse(el.dataset.entry.replace(/&quot;/g,'"'));
+  const entry=mkComp(data.raw,data.group||null);
+  G.msaYrOverride[key]=entry;
+  buildMsaYrPanel();
+}
+
+function clearMsaYrOverride(key){
+  G.msaYrOverride[key]=null;
+  buildMsaYrPanel();
+}
+
+function setMsaYrOverride(key,grp,el){} // legacy no-op
 function renderLog(){document.getElementById('log-el').innerHTML=G.log.join('<br>');document.getElementById('log-tog').classList.remove('hidden');}
 function togLog(){const el=document.getElementById('log-el'),t=document.getElementById('log-tog');const h=!el.classList.contains('hidden');el.classList.toggle('hidden',h);t.textContent=(h?'▸':'▾')+(h?' detection log':' detection log');}
 
-/* ═══════════════ DATA COMPUTATION ═══════════════ */
+/* If a parent comp has exactly 1 sub selected → treat as that sub-banner for data + display */
+function resolveComp(c){
+  if(!c||c.group)return c; // already a sub-banner or null → as-is
+  if(c.showSubs&&c.selSubs&&c.selSubs.size===1){
+    const grp=[...c.selSubs][0];
+    return{...mkComp(c.raw,grp),_mergedLabel:`${grp} — ${shortSup(c.raw)}`};
+  }
+  return c;
+}
+// When a parent comp has exactly 1 sub-banner selected → treat as that sub for data + label
+function getEffectiveComp(c){
+  if(!c)return c;
+  if(!c.group&&c.showSubs&&c.selSubs&&c.selSubs.size===1){
+    const sub=[...c.selSubs][0];
+    return{...mkComp(c.raw,sub),_singleSub:true};
+  }
+  return c;
+}
+function getDisplayLabel(c){
+  if(!c)return'';
+  if(!c.group&&c.showSubs&&c.selSubs&&c.selSubs.size===1){
+    return`${[...c.selSubs][0]} — ${shortSup(c.raw)}`;
+  }
+  return c.label;
+}
 function sData(mkt,comp,yr){
+  // If this is the MSA entry, use the per-year override if set
+  const effectiveComp=G.selMSA&&sameComp(comp,G.selMSA)?getMSAForYr(yr):comp;
+  const ec=getEffectiveComp(effectiveComp);
   const m=getYrMkt(mkt,yr);
-  let rows=G.raw.filter(r=>r.market===m&&r.retailer===comp.raw&&r.year===yr);
-  if(comp.group)rows=rows.filter(r=>r.group===comp.group);
+  let rows=G.raw.filter(r=>r.market===m&&r.retailer===ec.raw&&r.year===yr);
+  if(ec.group)rows=rows.filter(r=>r.group===ec.group);
   return{acv:rows.reduce((s,r)=>s+r.acv,0),stores:rows.reduce((s,r)=>s+r.stores,0)};
 }
 function tACV(mkt,yr){const m=getYrMkt(mkt,yr);return G.raw.filter(r=>r.market===m&&r.year===yr).reduce((s,r)=>s+r.acv,0);}
@@ -843,10 +1708,10 @@ function tSt(mkt,yr){
   G.raw.filter(r=>r.market===m&&r.year===yr).forEach(r=>by[r.retailer]=(by[r.retailer]||0)+r.stores);
   return Object.values(by).reduce((s,v)=>s+v,0);
 }
-// "All Other" correctly groups by raw retailer to avoid double-counting sub-banners
+// All Other: use effective comps to avoid double-counting sub-banners
 function calcUsed(mkt,yr,msa,comps){
   const byRaw={};
-  [msa,...comps].filter(Boolean).forEach(c=>{
+  [msa,...comps].filter(Boolean).map(getEffectiveComp).filter(Boolean).forEach(c=>{
     if(!byRaw[c.raw])byRaw[c.raw]={hasParent:false,groups:[]};
     if(!c.group)byRaw[c.raw].hasParent=true;
     else if(!byRaw[c.raw].groups.includes(c.group))byRaw[c.raw].groups.push(c.group);
@@ -919,18 +1784,30 @@ function genOutput(){
     const{ua:ua1,us:us1}=calcUsed(mkt,y1,msa,cfg.yr1comps);
     const{ua:ua2,us:us2}=calcUsed(mkt,y2,msa,cfg.yr2comps);
     const msaBdg=`<span style="font-size:9px;background:var(--gdm);color:var(--grn);padding:1px 5px;border-radius:2px;margin-left:4px">MSA</span>`;
-    const subBdg=c=>c&&c.group?`<span style="font-size:9px;background:var(--tdm);color:var(--tel);padding:1px 4px;border-radius:2px;margin-left:3px">sub</span>`:'';
+    const msaOvrBdg=`<span style="font-size:9px;background:rgba(248,81,73,.15);color:var(--red);padding:1px 5px;border-radius:2px;margin-left:4px">MSA override</span>`;
+    // Per-year MSA effective comps and labels
+    const msa1eff=getMSAForYr(y1),msa2eff=getMSAForYr(y2);
+    const msaDisp1=msa1eff?.group?`${msa1eff.group} — ${shortSup(msa1eff.raw)}`:G.selMSA?.label||'';
+    const msaDisp2=msa2eff?.group?`${msa2eff.group} — ${shortSup(msa2eff.raw)}`:G.selMSA?.label||'';
+    const msa1isOvr=!!(G.msaYrOverride.yr1);
+    const msa2isOvr=!!(G.msaYrOverride.yr2);
 
     // Render rows — each side sorted independently
     for(let i=0;i<maxR;i++){
-      const c1=yr1rows[i],c2=yr2rows[i];
-      const isMSA1=c1&&sameComp(c1,msa),isMSA2=c2&&sameComp(c2,msa);
+      const c1raw=yr1rows[i],c2raw=yr2rows[i];
+      const c1=c1raw?resolveComp(c1raw):null;
+      const c2=c2raw?resolveComp(c2raw):null;
+      const isMSA1=c1raw&&sameComp(c1raw,msa),isMSA2=c2raw&&sameComp(c2raw,msa);
       const d1=c1?sData(mkt,c1,y1):{acv:0,stores:0};
       const d2=c2?sData(mkt,c2,y2):{acv:0,stores:0};
       const sh1=c1&&ta1?d1.acv/ta1*100:0,sh2=c2&&ta2?d2.acv/ta2*100:0;
       const rowCls=(isMSA1||isMSA2)?'mr':'';
-      const lbl1=c1?(isMSA1?`<span class="msac">${c1.label}${msaBdg}</span>`:c1.label+subBdg(c1)):'—';
-      const lbl2=c2?(isMSA2?`<span class="msac">${c2.label}${msaBdg}</span>`:c2.label+subBdg(c2)):'—';
+      const disp1=isMSA1?msaDisp1:(c1?(c1._mergedLabel||c1.label):null);
+      const disp2=isMSA2?msaDisp2:(c2?(c2._mergedLabel||c2.label):null);
+      const badge1=isMSA1?(msa1isOvr?msaOvrBdg:msaBdg):'';
+      const badge2=isMSA2?(msa2isOvr?msaOvrBdg:msaBdg):'';
+      const lbl1=c1?(isMSA1?`<span class="msac">${disp1}${badge1}</span>`:disp1):'—';
+      const lbl2=c2?(isMSA2?`<span class="msac">${disp2}${badge2}</span>`:disp2):'—';
       h+=`<tr class="${rowCls}">
   <td class="${isMSA1?'msac':'lft'}">${lbl1}</td>
   <td class="rt ${cSh(sh1)}">${c1?sh1.toFixed(1)+'%':'—'}</td>
@@ -940,16 +1817,22 @@ function genOutput(){
   <td class="rt ${cSh(sh2)}">${c2?sh2.toFixed(1)+'%':'—'}</td>
   <td class="rt">${c2&&d2.stores?d2.stores:'—'}</td>
 </tr>`;
-      // MSA sub-banner rows follow MSA wherever it appears
+      // MSA sub-banner rows — italic, NOT highlighted
       if(isMSA1&&G.msaSubCfg.show&&G.msaSubCfg.selSubs.size>0){
         getSubRows(mkt,msa,y1,y2).filter(s=>G.msaSubCfg.selSubs.has(s.group)).forEach(s=>{
           const ss1=ta1?s.d1.acv/ta1*100:0,ss2=ta2?s.d2.acv/ta2*100:0;
-          h+=`<tr class="sub-r mr" style="background:rgba(13,33,73,.6)"><td class="lft" style="padding-left:22px;font-style:italic">${s.group}</td><td class="rt">${ss1.toFixed(1)}%</td><td class="rt">${s.d1.stores||'—'}</td><td class="sp"></td><td class="lft" style="padding-left:22px;font-style:italic">${s.group}</td><td class="rt">${ss2.toFixed(1)}%</td><td class="rt">${s.d2.stores||'—'}</td></tr>`;
+          h+=`<tr class="sub-r"><td class="lft" style="padding-left:22px;color:var(--txt3)">${s.group}</td><td class="rt">${ss1.toFixed(1)}%</td><td class="rt">${s.d1.stores||'—'}</td><td class="sp"></td><td class="lft" style="padding-left:22px;color:var(--txt3)">${s.group}</td><td class="rt">${ss2.toFixed(1)}%</td><td class="rt">${s.d2.stores||'—'}</td></tr>`;
         });
       }
-      // Comp sub-rows
-      const c1subs=c1&&!isMSA1&&c1.showSubs?getSubRows(mkt,c1,y1,y2):[];
-      const c2subs=c2&&!isMSA2&&c2.showSubs?getSubRows(mkt,c2,y2,y1):[];
+      // Comp sub-rows — skip if merged into single row (selSubs.size===1)
+      const getCSubs=(c_orig,c_res,yr_a,yr_b)=>{
+        if(!c_orig||sameComp(c_orig,msa)||!c_orig.showSubs)return[];
+        if(c_orig.selSubs&&c_orig.selSubs.size===1)return[];
+        const all=getSubRows(mkt,c_res,yr_a,yr_b);
+        return c_orig.selSubs&&c_orig.selSubs.size>0?all.filter(s=>c_orig.selSubs.has(s.group)):all;
+      };
+      const c1subs=getCSubs(c1raw,c1,y1,y2);
+      const c2subs=getCSubs(c2raw,c2,y2,y1);
       const maxSub=Math.max(c1subs.length,c2subs.length);
       for(let si=0;si<maxSub;si++){
         const s1=c1subs[si],s2=c2subs[si];
@@ -957,6 +1840,7 @@ function genOutput(){
         h+=`<tr class="sub-r"><td class="lft">${s1?s1.group:'—'}</td><td class="rt">${s1?ss1.toFixed(1)+'%':'—'}</td><td class="rt">${s1&&s1.d1.stores?s1.d1.stores:'—'}</td><td class="sp"></td><td class="lft">${s2?s2.group:'—'}</td><td class="rt">${s2?ss2.toFixed(1)+'%':'—'}</td><td class="rt">${s2&&s2.d1.stores?s2.d1.stores:'—'}</td></tr>`;
       }
     }
+
     // All Other always last
     const os1=ta1?Math.max(0,ta1-ua1)/ta1*100:0,os2=ta2?Math.max(0,ta2-ua2)/ta2*100:0;
     const ost1=Math.max(0,ts1-us1),ost2=Math.max(0,ts2-us2);
@@ -965,6 +1849,7 @@ function genOutput(){
     blk.innerHTML=h;out.appendChild(blk);
   }
   document.getElementById('dl-btn').classList.remove('hidden');
+  updProgress(true);
 }
 
 /* ═══════════════ XLSX DOWNLOAD ═══════════════ */
@@ -983,8 +1868,8 @@ function dlXLSX(){
   const sNR={fill:wF,font:nF(12),alignment:{horizontal:'right'}};
   const sSN={fill:wF,font:nF(10,false,true)};
   const sSNR={fill:wF,font:nF(10,false,true),alignment:{horizontal:'right'}};
-  const sMS={fill:msaFill,font:nF(10,false,true)};
-  const sMSR={fill:msaFill,font:nF(10,false,true),alignment:{horizontal:'right'}};
+  const sMS={fill:wF,font:nF(10,false,true)};   // MSA sub-rows: white fill, italic
+  const sMSR={fill:wF,font:nF(10,false,true),alignment:{horizontal:'right'}};
   const COLS=['A','B','C','D','E','F','G','H','I'];
 
   // ── PRE-FILL ENTIRE SHEET WHITE (1000 rows × A-Z) before writing data ──
@@ -1011,17 +1896,31 @@ function dlXLSX(){
     // Market header
     fillR(r,sH(12));put(`A${r}`,dn,'s',null,sH(14));put(`C${r}`,`Jan ${y1}`,'s',null,sHC(12));put(`H${r}`,`Jan ${y2}`,'s',null,sHC(12));r++;
     fillR(r,sH(12));put(`C${r}`,'Market Share','s',null,sHC(12));put(`D${r}`,'Store Count','s',null,sHC(12));put(`H${r}`,'Market Share','s',null,sHC(12));put(`I${r}`,'Store Count','s',null,sHC(12));r++;
+    // Track MAIN row cells separately (exclude sub-rows from formula to avoid double-count)
+    const mainCells_C=[],mainCells_H=[],mainCells_D=[],mainCells_I=[];
     // Data rows — all sorted together including MSA
     for(let i=0;i<maxR;i++){
-      const c1=yr1rows[i],c2=yr2rows[i];
-      const isMSA1=c1&&sameComp(c1,msa),isMSA2=c2&&sameComp(c2,msa);
+      const c1raw=yr1rows[i],c2raw=yr2rows[i];
+      const c1=c1raw?resolveComp(c1raw):null;
+      const c2=c2raw?resolveComp(c2raw):null;
+      const isMSA1=c1raw&&sameComp(c1raw,msa),isMSA2=c2raw&&sameComp(c2raw,msa);
       const d1=c1?sData(mkt,c1,y1):{acv:0,stores:0};
       const d2=c2?sData(mkt,c2,y2):{acv:0,stores:0};
       const sty1=isMSA1?sM:sN,styR1=isMSA1?sMR:sNR;
       const sty2=isMSA2?sM:sN,styR2=isMSA2?sMR:sNR;
-      put(`A${r}`,c1?c1.label:''  ,'s',null,sty1);put(`C${r}`,c1&&ta1?d1.acv/ta1:0,'n','0.0%',styR1);put(`D${r}`,c1?d1.stores||0:0,'n','0',styR1);
-      put(`F${r}`,c2?c2.label:''  ,'s',null,sty2);put(`H${r}`,c2&&ta2?d2.acv/ta2:0,'n','0.0%',styR2);put(`I${r}`,c2?d2.stores||0:0,'n','0',styR2);r++;
-      // MSA sub-rows follow MSA wherever it lands
+      // Use year-specific override label for MSA rows
+      const msaOvr1=getMSAForYr(y1),msaOvr2=getMSAForYr(y2);
+      const msaL1=msaOvr1?.group?`${msaOvr1.group} — ${shortSup(msaOvr1.raw)}`:(msa?.label||'');
+      const msaL2=msaOvr2?.group?`${msaOvr2.group} — ${shortSup(msaOvr2.raw)}`:(msa?.label||'');
+      const disp1=isMSA1?msaL1:(c1?(c1._mergedLabel||c1.label):'');
+      const disp2=isMSA2?msaL2:(c2?(c2._mergedLabel||c2.label):'');
+      put(`A${r}`,disp1,'s',null,sty1);put(`C${r}`,c1&&ta1?d1.acv/ta1:0,'n','0.0%',styR1);put(`D${r}`,c1?d1.stores||0:0,'n','0',styR1);
+      put(`F${r}`,disp2,'s',null,sty2);put(`H${r}`,c2&&ta2?d2.acv/ta2:0,'n','0.0%',styR2);put(`I${r}`,c2?d2.stores||0:0,'n','0',styR2);
+      // Only add MAIN rows to formula sum (not sub-rows)
+      mainCells_C.push(`C${r}`);mainCells_H.push(`H${r}`);
+      mainCells_D.push(`D${r}`);mainCells_I.push(`I${r}`);
+      r++;
+      // MSA sub-rows (display only — NOT in formula sum)
       if(isMSA1&&G.msaSubCfg.show&&G.msaSubCfg.selSubs.size>0){
         getSubRows(mkt,msa,y1,y2).filter(s=>G.msaSubCfg.selSubs.has(s.group)).forEach(s=>{
           const sh1=ta1?s.d1.acv/ta1:0,sh2=ta2?s.d2.acv/ta2:0;
@@ -1029,9 +1928,15 @@ function dlXLSX(){
           put(`F${r}`,s.group,'s',null,sMS);put(`H${r}`,sh2,'n','0.0%',sMSR);put(`I${r}`,s.d2.stores||0,'n','0',sMSR);r++;
         });
       }
-      // Comp sub-rows
-      const c1subs=c1&&!isMSA1&&c1.showSubs?getSubRows(mkt,c1,y1,y2):[];
-      const c2subs=c2&&!isMSA2&&c2.showSubs?getSubRows(mkt,c2,y2,y1):[];
+      // Comp sub-rows — skip merged, display-only NOT in formula sum
+      const getCSubs=(c_orig,c_res,yr_a,yr_b)=>{
+        if(!c_orig||sameComp(c_orig,msa)||!c_orig.showSubs)return[];
+        if(c_orig.selSubs&&c_orig.selSubs.size===1)return[];
+        const all=getSubRows(mkt,c_res,yr_a,yr_b);
+        return c_orig.selSubs&&c_orig.selSubs.size>0?all.filter(s=>c_orig.selSubs.has(s.group)):all;
+      };
+      const c1subs=getCSubs(c1raw,c1,y1,y2);
+      const c2subs=getCSubs(c2raw,c2,y2,y1);
       const maxSub=Math.max(c1subs.length,c2subs.length);
       for(let si=0;si<maxSub;si++){
         const s1=c1subs[si],s2=c2subs[si];
@@ -1039,11 +1944,17 @@ function dlXLSX(){
         put(`F${r}`,s2?s2.group:''  ,'s',null,sSN);put(`H${r}`,s2&&ta2?s2.d1.acv/ta2:0,'n','0.0%',sSNR);put(`I${r}`,s2?s2.d1.stores||0:0,'n','0',sSNR);r++;
       }
     }
-    // All Other always last
-    const os1=ta1?Math.max(0,ta1-ua1)/ta1:0,os2=ta2?Math.max(0,ta2-ua2)/ta2:0;
-    const ost1=Math.max(0,ts1-us1),ost2=Math.max(0,ts2-us2);
-    put(`A${r}`,'All Other','s',null,sN);put(`C${r}`,os1,'n','0.0%',sNR);put(`D${r}`,ost1,'n','0',sNR);
-    put(`F${r}`,'All Other','s',null,sN);put(`H${r}`,os2,'n','0.0%',sNR);put(`I${r}`,ost2,'n','0',sNR);
+    // All Other — formula sums ONLY main rows (excludes sub-rows → no double-count)
+    const sumC=mainCells_C.length?`SUM(${mainCells_C.join(',')})`:'0';
+    const sumH=mainCells_H.length?`SUM(${mainCells_H.join(',')})`:'0';
+    const sumD=mainCells_D.length?`SUM(${mainCells_D.join(',')})`:'0';
+    const sumI=mainCells_I.length?`SUM(${mainCells_I.join(',')})`:'0';
+    put(`A${r}`,'All Other','s',null,sN);
+    ws[`C${r}`]={v:0,t:'n',f:`MAX(0,1-${sumC})`,s:sNR,z:'0.0%'};
+    ws[`D${r}`]={v:0,t:'n',f:`MAX(0,${ts1}-${sumD})`,s:sNR,z:'0'};
+    put(`F${r}`,'All Other','s',null,sN);
+    ws[`H${r}`]={v:0,t:'n',f:`MAX(0,1-${sumH})`,s:sNR,z:'0.0%'};
+    ws[`I${r}`]={v:0,t:'n',f:`MAX(0,${ts2}-${sumI})`,s:sNR,z:'0'};
     r++;r++;
   }
   r++;
@@ -1053,6 +1964,133 @@ function dlXLSX(){
   XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
   XLSX.writeFile(wb,`MSA_MarketShare_Jan${y1}_vs_Jan${y2}.xlsx`);
 }
+
+/* ══════════════ THEME TOGGLE ══════════════ */
+(function(){
+  const saved=localStorage.getItem('msa-theme')||'dark';
+  applyTheme(saved);
+})();
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme',t);
+  const icon=document.getElementById('tt-icon');
+  const lbl=document.getElementById('tt-lbl');
+  if(icon)icon.textContent=t==='light'?'☀':'🌙';
+  if(lbl)lbl.textContent=t==='light'?'Light':'Dark';
+  localStorage.setItem('msa-theme',t);
+}
+function toggleTheme(){
+  const cur=document.documentElement.getAttribute('data-theme')||'dark';
+  applyTheme(cur==='dark'?'light':'dark');
+}
+
+/* ══════════════ TOAST SYSTEM ══════════════ */
+const TOAST_DUR=4200;
+function showToast(title,msg,type='ok'){
+  const rack=document.getElementById('toast-rack');
+  const icons={ok:'✓',warn:'⚠',err:'✕'};
+  const t=document.createElement('div');
+  t.className=`toast t-${type}`;
+  t.innerHTML=`
+    <span class="toast-icon">${icons[type]||'●'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${msg?`<div class="toast-msg">${msg}</div>`:''}
+      <div class="toast-bar"><div class="toast-prog" id="tp-${Date.now()}"></div></div>
+    </div>
+    <span class="toast-close" onclick="dismissToast(this.closest('.toast'))">✕</span>`;
+  rack.appendChild(t);
+  // Animate progress bar
+  const bar=t.querySelector('.toast-prog');
+  requestAnimationFrame(()=>{
+    bar.style.transitionDuration=TOAST_DUR+'ms';
+    bar.style.width='0%';
+  });
+  const tid=setTimeout(()=>dismissToast(t),TOAST_DUR);
+  t._tid=tid;
+}
+function dismissToast(t){
+  if(!t||!t.parentNode)return;
+  clearTimeout(t._tid);
+  t.classList.add('hiding');
+  setTimeout(()=>t.remove(),200);
+}
+
+/* ══════════════ DROP ZONE LOADED STATE ══════════════ */
+function handleDzClick(fiId,dzEl){
+  if(dzEl.classList.contains('loaded'))return;
+  document.getElementById(fiId).click();
+}
+function resetDz(dzId){
+  const cfg={
+    'dz-r':{fiId:'fiR',dziId:'dzi-r',dztId:'dzt-r',icon:'⬆',isTel:false,txt:'Drop raw data file or click to browse'},
+    'dz-ref':{fiId:'fiRef',dziId:'dzi-ref',dztId:'dzt-ref',icon:'◆',isTel:true,txt:'Drop prior MSA reference file or click to browse'}
+  }[dzId];
+  if(!cfg)return;
+  const dz=document.getElementById(dzId);
+  const dzi=document.getElementById(cfg.dziId);
+  const dzt=document.getElementById(cfg.dztId);
+  dz.classList.remove('loaded');
+  dz.onclick=function(){handleDzClick(cfg.fiId,this)};
+  dzi.textContent=cfg.icon;
+  dzi.style.color=cfg.isTel?'var(--tel)':'';
+  dzi.style.opacity='';
+  dzt.innerHTML=cfg.txt;
+}
+function setDzLoaded(dzId,dziId,dztId,fname,meta,isTel=false){
+  const dz=document.getElementById(dzId);
+  const dzi=document.getElementById(dziId);
+  const dzt=document.getElementById(dztId);
+  if(!dz||!dzi||!dzt)return;
+  dz.classList.add('loaded');
+  dz.onclick=null;
+  const color=isTel?'var(--tel)':'var(--grn)';
+  dzi.style.color=color;dzi.textContent='✓';dzi.style.opacity='1';
+  dzt.innerHTML=`<div class="dz-loaded-info">
+    <div class="dz-fname">${fname}</div>
+    <div class="dz-meta">${meta}</div>
+    <div class="dz-change" onclick="event.stopPropagation();resetDz('${dzId}')">↩ Change file</div>
+  </div>`;
+}
+
+/* ══════════════ SECTION REVEAL ANIMATION ══════════════ */
+(function(){
+  // Watch all .sec elements for hidden→visible transitions
+  const obs=new MutationObserver(muts=>{
+    muts.forEach(m=>{
+      if(m.type==='attributes'&&m.attributeName==='class'){
+        const el=m.target;
+        if(!el.classList.contains('sec'))return;
+        if(!el.classList.contains('hidden')&&!el._everShown){
+          el._everShown=true;
+          el.classList.add('sec-anim');
+          setTimeout(()=>el.classList.remove('sec-anim'),300);
+        }
+      }
+    });
+  });
+  // Observe after DOM ready
+  document.querySelectorAll('.sec').forEach(el=>obs.observe(el,{attributes:true}));
+})();
+
+/* ══════════════ PROGRESS TRACKER ══════════════ */
+function updProgress(outputDone=false){
+  const step1Done=G.raw.length>0;
+  const step2Done=!!G.selMSA;
+  const step3Done=step2Done&&Object.keys(G.cfgs).length>0&&!!G.selYP;
+  const step4Done=outputDone||document.getElementById('dl-btn')&&!document.getElementById('dl-btn').classList.contains('hidden');
+
+  const setPs=(id,done,active)=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.className='ps'+(done?' done':active?' active':'');
+  };
+  setPs('ps-1',step1Done,!step1Done);
+  setPs('ps-2',step2Done,step1Done&&!step2Done);
+  setPs('ps-3',step3Done,step2Done&&!step3Done);
+  setPs('ps-4',step4Done,step3Done&&!step4Done);
+}
+// Hook updProgress into updBtn so it fires whenever state changes
+const _origUpdBtn=typeof updBtn!=='undefined'?updBtn:null;
 </script>
 </body>
 </html>
